@@ -1,1 +1,2 @@
-Embedded Systems and Robotics project, using the e-puck 2 robot from GCtronic.
+Embedded Systems and Robotics project @EPFL using the e-puck 2 robot from GCtronic.
+
