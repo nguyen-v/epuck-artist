@@ -21,8 +21,25 @@
 #include <mod_data.h>
 
 /*===========================================================================*/
+/* Module constants.                                                         */
+/*===========================================================================*/
+
+#define SERIAL_BIT_RATE			115200
+
+/*===========================================================================*/
+/* Module local variables.                                                   */
+/*===========================================================================*/
+
+
+/*===========================================================================*/
+/* Module mutexes, semaphores.                                               */
+/*===========================================================================*/
+MUTEX_DECL(serial_mtx);
+
+/*===========================================================================*/
 /* Module exported functions.                                                   */
 /*===========================================================================*/
+
 
 /**
  * @brief	Starts serial communication.
@@ -39,6 +56,11 @@ void com_serial_start(void)
 
 	sdStart(&SD3, &ser_cfg); // UART3.
 }
+
+/**
+ * @brief	Returns true if e-puck is currently reading data.
+ * @return	Bool indicating reading state of e-puck.
+ */
 
 
 /**
@@ -92,6 +114,8 @@ uint8_t com_receive_command(BaseSequentialStream* in)
  */
 uint16_t com_receive_data(BaseSequentialStream* in)
 {
+	// restrict access to SD3 by other threads
+	chMtxLock(&serial_mtx);
 
 	volatile uint8_t c1, c2;
 	volatile uint16_t length = 0;
@@ -146,7 +170,7 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 
 	chprintf((BaseSequentialStream *)&SDU1, "Length = %d \r \n", length);
 
-	// get pointers to position and color buffers
+	// allocate and get pointers to position and color buffers
 	cartesian_coord* pos = data_alloc_xy(length);
 	uint8_t* color = data_alloc_color(length);
 
@@ -172,6 +196,8 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 		pos[i].y = (uint16_t)((c1 | c2<<8));
 	}
 
+	// release access to SD3 by other threads
+	chMtxUnlock(&serial_mtx);
 	chprintf((BaseSequentialStream *)&SDU1, "Position and color buffers filled");
 
 	for(uint16_t i = 0; i < length; ++i) {
