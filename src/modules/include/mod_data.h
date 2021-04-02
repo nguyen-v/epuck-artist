@@ -23,7 +23,7 @@ typedef struct cartesian_coord{
 } cartesian_coord;
 
 /*===========================================================================*/
-/* Module inline functions.                                                  */
+/* External declarations.                                                    */
 /*===========================================================================*/
 
 uint16_t data_get_length(void);
