@@ -15,6 +15,14 @@
 #include <mod_data.h>
 
 /*===========================================================================*/
+/* Module constants.                                                         */
+/*===========================================================================*/
+
+#define MAX_ALLOCATED_DATA	100000 // max size in bytes for data structures
+#define SIZE_OF_DATA		sizeof(cartesian_coord) + sizeof(uint8_t)
+#define MAX_LENGTH			MAX_ALLOCATED_DATA/SIZE_OF_DATA
+
+/*===========================================================================*/
 /* Module local variables.                                                   */
 /*===========================================================================*/
 

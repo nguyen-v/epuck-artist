@@ -7,13 +7,6 @@
 #define _MOD_DATA_H_
 
 /*===========================================================================*/
-/* Module constants.                                                         */
-/*===========================================================================*/
-
-#define MAX_ALLOCATED_DATA		100000 // max size in bytes for data structures
-#define MAX_LENGTH				MAX_ALLOCATED_DATA/(sizeof(cartesian_coord) + sizeof(uint8_t))
-
-/*===========================================================================*/
 /* Module data structures and types.                                         */
 /*===========================================================================*/
 
