@@ -99,20 +99,18 @@ static void process_command(uint8_t cmd)
  * @note	A mutex is used to restrict access to the serial
  * 			by the thread when the e-puck is reading move data.
  */
-static THD_WORKING_AREA(wa_process_cmd, 64);
-static THD_FUNCTION(thd_process_cmd, arg)
-{
-	chRegSetThreadName(__FUNCTION__);
-	(void)arg;
-
-	while(1) {
-		chMtxLock(&serial_mtx);
-		uint8_t cmd = com_receive_command((BaseSequentialStream *)&SD3);
-		chMtxUnlock(&serial_mtx);
-		process_command(cmd);
-		chThdSleepMilliseconds(CMD_PERIOD);
-	}
-}
+//static THD_WORKING_AREA(wa_process_cmd, 256);
+//static THD_FUNCTION(thd_process_cmd, arg)
+//{
+//	chRegSetThreadName(__FUNCTION__);
+//	(void)arg;
+//
+//	while(1) {
+//		uint8_t cmd = com_receive_command((BaseSequentialStream *)&SD3);
+//		process_command(cmd);
+//		chThdSleepMilliseconds(CMD_PERIOD);
+//	}
+//}
 
 /*===========================================================================*/
 /* Main function.                                                   		 */
@@ -121,8 +119,9 @@ static THD_FUNCTION(thd_process_cmd, arg)
 int main(void)
 {
 	initAll();
-	chThdCreateStatic(wa_process_cmd, sizeof(wa_process_cmd), NORMALPRIO, thd_process_cmd, NULL);
-    while(1) {
+//	chThdCreateStatic(wa_process_cmd, sizeof(wa_process_cmd), NORMALPRIO, thd_process_cmd, NULL);
+	while(1) {
+		process_command(com_receive_command((BaseSequentialStream *)&SD3));
 		chThdSleepMilliseconds(CMD_PERIOD);
     }
 }
