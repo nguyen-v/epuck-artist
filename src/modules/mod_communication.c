@@ -30,11 +30,12 @@
 /* Module local variables.                                                   */
 /*===========================================================================*/
 
+static bool data_is_ready = false;
 
 /*===========================================================================*/
 /* Module mutexes, semaphores.                                               */
 /*===========================================================================*/
-MUTEX_DECL(serial_mtx);
+//MUTEX_DECL(serial_mtx);
 
 /*===========================================================================*/
 /* Module exported functions.                                                   */
@@ -61,7 +62,10 @@ void com_serial_start(void)
  * @brief	Returns true if e-puck is currently reading data.
  * @return	Bool indicating reading state of e-puck.
  */
-
+bool data_ready(void)
+{
+	return data_is_ready;
+}
 
 /**
  * @brief			Reads a command from the computer.
@@ -114,9 +118,6 @@ uint8_t com_receive_command(BaseSequentialStream* in)
  */
 uint16_t com_receive_data(BaseSequentialStream* in)
 {
-	// restrict access to SD3 by other threads
-	chMtxLock(&serial_mtx);
-
 	volatile uint8_t c1, c2;
 	volatile uint16_t length = 0;
 	uint8_t state = 0;
@@ -158,6 +159,7 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 
 	// reset data information and free buffers
 	data_free();
+	data_is_ready = false;
 
 	// get length of incoming data
 	c1 = chSequentialStreamGet(in);
@@ -175,6 +177,7 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 	uint8_t* color = data_alloc_color(length);
 
 	if (pos == NULL || color == NULL) {
+		data_is_ready = false;
 		chprintf((BaseSequentialStream *)&SDU1, "Allocation failed \r \n");
 		return 0;
 	}
@@ -196,8 +199,6 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 		pos[i].y = (uint16_t)((c1 | c2<<8));
 	}
 
-	// release access to SD3 by other threads
-	chMtxUnlock(&serial_mtx);
 	chprintf((BaseSequentialStream *)&SDU1, "Position and color buffers filled");
 
 	for(uint16_t i = 0; i < length; ++i) {
@@ -206,7 +207,7 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 		chprintf((BaseSequentialStream *)&SDU1, "x=%d \r \n", pos[i].x);
 		chprintf((BaseSequentialStream *)&SDU1, "y=%d \r \n", pos[i].y);
 	}
-
+	data_is_ready = true;
 	return length;
 }
 
