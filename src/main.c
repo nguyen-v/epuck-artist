@@ -39,7 +39,7 @@
 
 // Periods
 
-#define CMD_PERIOD			1000
+#define PERIOD_CMD		1000
 
 /*===========================================================================*/
 /* Module local functions.                                                   */
@@ -48,7 +48,7 @@
 /**
  * @brief				Initalizes all modules.
  */
-static void initAll(void)
+static void init_all(void)
 {
 	halInit();
 	chSysInit();
@@ -118,11 +118,11 @@ static void process_command(uint8_t cmd)
 
 int main(void)
 {
-	initAll();
+	init_all();
 //	chThdCreateStatic(wa_process_cmd, sizeof(wa_process_cmd), NORMALPRIO, thd_process_cmd, NULL);
 	while(1) {
 		process_command(com_receive_command((BaseSequentialStream *)&SD3));
-		chThdSleepMilliseconds(CMD_PERIOD);
+		chThdSleepMilliseconds(PERIOD_CMD);
     }
 }
 
