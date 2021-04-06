@@ -17,6 +17,4 @@ extern parameter_namespace_t parameter_root;
 }
 #endif
 
-
-
 #endif
