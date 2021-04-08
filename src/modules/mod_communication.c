@@ -41,11 +41,6 @@ static bool data_is_ready = false;
 /* Module exported functions.                                                   */
 /*===========================================================================*/
 
-
-/**
- * @brief	Starts serial communication.
- * @note	UART3 is connected to COM8 (Bluetooth).
- */
 void com_serial_start(void)
 {
 	static SerialConfig ser_cfg = {
@@ -58,22 +53,11 @@ void com_serial_start(void)
 	sdStart(&SD3, &ser_cfg); // UART3.
 }
 
-/**
- * @brief	Returns true if e-puck is currently reading data.
- * @return	Bool indicating reading state of e-puck.
- */
 bool data_ready(void)
 {
 	return data_is_ready;
 }
 
-/**
- * @brief			Reads a command from the computer.
- * @note			UART3 is connected to COM8 (Bluetooth).
- *
- * @param[in] in 	Pointer to a @p BaseSequentialStream or derived class
- * @return			An utf-8 encoded command
- */
 uint8_t com_receive_command(BaseSequentialStream* in)
 {
 	volatile uint8_t c;
@@ -108,14 +92,6 @@ uint8_t com_receive_command(BaseSequentialStream* in)
 }
 
 
-/**
- * @brief				Reads movement data from the computer.
- * @note				UART3 is connected to COM8 (Bluetooth).
- *
- * @param[in] 	in 		Pointer to a @p BaseSequentialStream or derived class
- * @param[out] 	pos		Pointer to position buffer @p cartesian_coord
- * @return				Length of the position buffer.
- */
 uint16_t com_receive_data(BaseSequentialStream* in)
 {
 	volatile uint8_t c1, c2;
@@ -170,20 +146,19 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 	data_set_length(length);
 	length = data_get_length();
 
-	chprintf((BaseSequentialStream *)&SDU1, "Length = %d \r \n", length);
-
 	// allocate and get pointers to position and color buffers
-	cartesian_coord* pos = data_alloc_xy(length);
+	cartesian_coord* pos = data_alloc_xy(length);;
 	uint8_t* color = data_alloc_color(length);
 
 	if (pos == NULL || color == NULL) {
 		data_is_ready = false;
-		chprintf((BaseSequentialStream *)&SDU1, "Allocation failed \r \n");
+//		chprintf((BaseSequentialStream *)&SDU1, "Allocation failed \r \n");
 		return 0;
 	}
-	chprintf((BaseSequentialStream *)&SDU1, "Position and color buffers allocated \r \n");
-	chprintf((BaseSequentialStream *)&SDU1, "Size in bytes of color buffer = %d \r \n", length*sizeof(uint8_t));
-	chprintf((BaseSequentialStream *)&SDU1, "Size in bytes of position buffer = %d \r \n", length*sizeof(cartesian_coord));
+
+//	chprintf((BaseSequentialStream *)&SDU1, "Position and color buffers allocated, length = %d \r \n", length);
+//	chprintf((BaseSequentialStream *)&SDU1, "Size in bytes of color buffer = %d \r \n", length*sizeof(uint8_t));
+//	chprintf((BaseSequentialStream *)&SDU1, "Size in bytes of position buffer = %d \r \n", length*sizeof(cartesian_coord));
 
 	//	fill the position and color buffers
 	for(uint16_t i = 0; i < length; ++i) {
@@ -197,16 +172,12 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 		c1 = chSequentialStreamGet(in);
 		c2 = chSequentialStreamGet(in);
 		pos[i].y = (uint16_t)((c1 | c2<<8));
+
+//		chprintf((BaseSequentialStream *)&SDU1, "c=%d \r \n", color[i]);
+//		chprintf((BaseSequentialStream *)&SDU1, "x=%d \r \n", pos[i].x);
+//		chprintf((BaseSequentialStream *)&SDU1, "y=%d \r \n", pos[i].y);
 	}
 
-	chprintf((BaseSequentialStream *)&SDU1, "Position and color buffers filled");
-
-	for(uint16_t i = 0; i < length; ++i) {
-		chprintf((BaseSequentialStream *)&SDU1, "size=%d \r \n", length);
-		chprintf((BaseSequentialStream *)&SDU1, "c=%d \r \n", color[i]);
-		chprintf((BaseSequentialStream *)&SDU1, "x=%d \r \n", pos[i].x);
-		chprintf((BaseSequentialStream *)&SDU1, "y=%d \r \n", pos[i].y);
-	}
 	data_is_ready = true;
 	return length;
 }
