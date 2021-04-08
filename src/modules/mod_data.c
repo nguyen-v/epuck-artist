@@ -27,18 +27,18 @@
 /*===========================================================================*/
 
 static cartesian_coord* pos = NULL;
-// separate color from cartesian_coord struct to avoid padding
-static uint8_t* color = NULL;
+static uint8_t* color = NULL;	// not in cartesian_coord to avoid padding
 static uint16_t data_length = 0;
 
 /*===========================================================================*/
 /* Module exported functions.                                                */
 /*===========================================================================*/
 
-uint16_t data_get_length(void)
+cartesian_coord* data_get_pos(void)
 {
-	return data_length;
+	return pos;
 }
+
 
 void data_set_length(uint16_t length)
 {
@@ -48,6 +48,12 @@ void data_set_length(uint16_t length)
 		data_length = length;
 	}
 }
+
+uint16_t data_get_length(void)
+{
+	return data_length;
+}
+
 
 void data_free(void)
 {
@@ -59,13 +65,6 @@ void data_free(void)
 }
 
 
-/**
- * @brief				Allocates memory for the position buffer.
- *
- * @param[in] 	length 	Length (number of coordinates)
- * @return				Pointer to position buffer.
- * 						NULL if allocation failed.
- */
 cartesian_coord* data_alloc_xy(uint16_t length)
 {
 	uint16_t temp_length = length;
@@ -74,44 +73,26 @@ cartesian_coord* data_alloc_xy(uint16_t length)
 		temp_length = MAX_LENGTH;
 	}
 
-	bool allocated = true;
-	pos = NULL;
 	pos = (cartesian_coord*)malloc(temp_length*sizeof(cartesian_coord));
-
 	if(pos == NULL) {
-		allocated = false;
-	}
-	if(!allocated) {
-		return NULL;
+		return pos;
 	}
 
 	return pos;
 }
 
-/**
- * @brief				Allocates memory for the color buffer.
- *
- * @param[in] 	length 	Length (number of coordinates)
- * @return				Pointer to color buffer.
- * 						NULL if allocation failed.
- */
+
 uint8_t* data_alloc_color(uint16_t length)
 {
 	uint16_t temp_length = length;
-
 	if(length > MAX_LENGTH) {
 		temp_length = MAX_LENGTH;
 	}
 
-	bool allocated = true;
-	color = NULL;
 	color = (uint8_t*)malloc(temp_length*sizeof(uint8_t));
 
 	if(color == NULL) {
-			allocated = false;
-		}
-	if(!allocated) {
-		return NULL;
+		return color;
 	}
 
 	return color;

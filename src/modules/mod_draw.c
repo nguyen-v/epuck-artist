@@ -78,25 +78,6 @@ static uint16_t len0_st = 0; //steps
 /* Module local functions.                                                	 */
 /*===========================================================================*/
 
-//void right_motor_set_length(uint16_t step, int16_t speed)
-//{
-//	int16_t speed_abs = 0;
-//	arm_abs_q15(&speed, &speed_abs, 1);
-//
-//	right_motor_set_speed(speed);
-//	chThdSleepMicroseconds(step*1000000/speed_abs); // maybe try ms
-//	right_motor_set_speed(0);
-//}
-//
-//void left_motor_set_length(uint16_t step, int16_t speed)
-//{
-//	int16_t speed_abs = 0;
-//	arm_abs_q15(&speed, &speed_abs, 1);
-//
-//	left_motor_set_speed(speed);
-//	chThdSleepMicroseconds(step*1000000/speed_abs); // maybe try ms
-//	left_motor_set_speed(0);
-//}
 
 static void motor_set_step(int32_t step_left, int32_t step_right, uint16_t speed)
 {
@@ -106,82 +87,28 @@ static void motor_set_step(int32_t step_left, int32_t step_right, uint16_t speed
 	uint32_t time = 0;
 	float speed_left = 0;
 	float speed_right = 0;
-	chprintf((BaseSequentialStream *)&SDU1, "step_left = %d \r \n", step_left);
-	chprintf((BaseSequentialStream *)&SDU1, "step_right= %d \r \n", step_right);
 
-	//
-//	if (step_left_abs < STEP_THRESHOLD && step_right_abs > STEP_THRESHOLD) {
-//		speed_left = 0;
-//		speed_right = speed * (step_right/step_right_abs);
-//		time = 1000*step_right_abs/speed;
-//	} else if (step_left_abs > STEP_THRESHOLD && step_right_abs < STEP_THRESHOLD) {
-//		speed_right = 0;
-//		speed_left = speed * (step_left/step_left_abs);
-//		time = 1000*step_left_abs/speed;
-//	if (step_left_abs > step_right_abs) {
-//		time = 1000*step_right_abs/speed;
-//		speed_left = speed*step_left/step_right_abs;
-//		speed_right = speed * (step_right/step_right_abs);
-//		chprintf((BaseSequentialStream *)&SDU1, "left speed = %d \r \n", (int16_t)speed_left);
-//		chprintf((BaseSequentialStream *)&SDU1, "right speed = %d \r \n", (int16_t)speed_right);
-//		if(abs(speed_left) > MOTOR_SPEED_LIMIT) {
-//			speed_left = speed * (step_left/step_left_abs);
-//			speed_right = 0;
-//			time = 1000*step_left_abs/speed;
-//		}
-//	} else {
-//		time = 1000*step_left_abs/speed;
-//		speed_left = speed * (step_left/step_left_abs);
-//		speed_right = speed*step_right/step_left_abs;
-//		chprintf((BaseSequentialStream *)&SDU1, "left speed = %d \r \n", (int16_t)speed_left);
-//		chprintf((BaseSequentialStream *)&SDU1, "right speed = %d \r \n", (int16_t)speed_right);
-//		if(abs(speed_right) > MOTOR_SPEED_LIMIT) {
-//			speed_left = 0;
-//			speed_right = speed * (step_right/step_right_abs);
-//			time = 1000*step_right_abs/speed;
-//		}
-//	}
-//
-//	chprintf((BaseSequentialStream *)&SDU1, "left speed FINAL= %d \r \n", (int16_t)speed_left);
-//	chprintf((BaseSequentialStream *)&SDU1, "right speed FINAL= %d \r \n", (int16_t)speed_right);
-//	chprintf((BaseSequentialStream *)&SDU1, "time = %d \r \n", time);
-//	right_motor_set_speed(-speed_left);
-//	left_motor_set_speed(-speed_right);
-//	if(time < TIME_SLEEP_MIN)
-//		time = TIME_SLEEP_MIN;
 	if (step_left_abs > step_right_abs) {
 		time = 1000*step_left_abs/speed;
 		speed_left = speed*step_left/step_left_abs;
 		speed_right = speed * ((float)step_right/step_left_abs);
-		chprintf((BaseSequentialStream *)&SDU1, "left speed = %d \r \n", (int16_t)speed_left);
-		chprintf((BaseSequentialStream *)&SDU1, "right speed = %d \r \n", (int16_t)speed_right);
 	} else {
 		time = 1000*step_right_abs/speed;
 		speed_left = speed * ((float)step_left/step_right_abs);
 		speed_right = speed*step_right/step_right_abs;
-		chprintf((BaseSequentialStream *)&SDU1, "left speed = %d \r \n", (int16_t)speed_left);
-		chprintf((BaseSequentialStream *)&SDU1, "right speed = %d \r \n", (int16_t)speed_right);
 	}
 
-	chprintf((BaseSequentialStream *)&SDU1, "time = %d \r \n", time);
+//	chprintf((BaseSequentialStream *)&SDU1, "left speed = %d \r \n", (int16_t)speed_left);
+//	chprintf((BaseSequentialStream *)&SDU1, "right speed = %d \r \n", (int16_t)speed_right);
+//	chprintf((BaseSequentialStream *)&SDU1, "time = %d \r \n", time);
+
+	// minus sign because of the orientation of e-puck
 	right_motor_set_speed(-speed_left);
 	left_motor_set_speed(-speed_right);
 	chThdSleepMilliseconds(time);
 	right_motor_set_speed(0);
 	left_motor_set_speed(0);
 }
-
-
-
-//int32_t xy_to_step_left(uint16_t x, uint16_t y)
-//{
-//
-//}
-//
-//int32_t xy_to_step_right(uint16_t x, uint16_t y)
-//{
-//
-//}
 
 /*===========================================================================*/
 /* Module exported functions.                                                */
@@ -192,6 +119,7 @@ void draw_set_init_length(float y_length)
 	y0_st = CM_TO_STEP*y_length;
 	len0_st = sqrt(x0_st*x0_st + y0_st*y0_st);
 	chprintf((BaseSequentialStream *)&SDU1, "x0_st = %d \r \n",x0_st);
+	chprintf((BaseSequentialStream *)&SDU1, "y0_st = %d \r \n",y0_st);
 	chprintf((BaseSequentialStream *)&SDU1, "len0_st = %d \r \n",len0_st);
 }
 
