@@ -12,6 +12,7 @@ GLOBAL_PATH = lib/e-puck2_main-processor
 CSRC += ./main.c \
 		./modules/mod_communication.c \
 		./modules/mod_data.c \
+		./modules/mod_draw.c \
 		
 
 #Header folders to include
