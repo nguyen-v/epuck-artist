@@ -13,6 +13,7 @@ CSRC += ./main.c \
 		./modules/mod_communication.c \
 		./modules/mod_data.c \
 		./modules/mod_draw.c \
+		./modules/mod_state.c \
 		
 
 #Header folders to include
