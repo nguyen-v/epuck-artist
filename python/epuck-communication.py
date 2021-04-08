@@ -37,6 +37,7 @@ COMMANDS = (
     'I'         # INTERACTIVE
 )
 
+
 # ===========================================================================
 #  Threads.                                                         
 # ===========================================================================
@@ -108,10 +109,9 @@ def connect_to_epuck(port):
         sys.exit(0)
 
     # discard input and ouput buffers
-    ser.reset_input_buffer()
-    ser.reset_output_buffer()
+    # ser.reset_input_buffer()
+    # ser.reset_output_buffer()
     send_command(ser, 'R') # reset the e-puck when first connecting
-
     return ser
 
 # todo: check state of e-puck: certain command should not be sent when
@@ -123,23 +123,36 @@ def send_command(ser, command):
         try:
             # ser.reset_input_buffer()
             # ser.reset_output_buffer()
+            ser.reset_input_buffer()
+            ser.reset_output_buffer()
             ser.write(b'CMD')
             ser.write(command.encode()) # send command as bytes (utf-8)
 
         except serial.SerialException:
             print("Error occured when sending command. "
             "Connection to e-puck lost.")
-        # wait for confirmation message
+        time.sleep(2) # wait for the e-puck to properly process the command
 
 def get_data():
-    data_color = np.array([0, 4, 6], dtype = np.uint8)                               # rewrite
-    data_pos = np.array([[32433, 4343],[320, 43], [0, 4]], dtype = np.uint16)
+    # data_color = np.array([0, 4, 6], dtype = np.uint8)                               # rewrite
+    data_color = np.array([0,3,1,5,1,1,7,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], dtype = np.uint8)                               # rewrite
+    # data_pos = np.array([[430, 0]], dtype = np.uint16)
+    # data_pos = np.array([[512, 0], [612, 0], [612, 50], [512, 50], [512, 0]], dtype = np.uint16) # 2 squares
+    data_pos = np.array([[512, 0], [463, 0],[467, 26], [461, 49], [435, 89],[415, 138], [404, 158], [417, 164], [448, 139], [450, 104], [449, 154], [455, 187], [481, 186], [477, 163], [474, 284], [487, 294], [500, 289], [502, 268], [482, 268], [481, 263], [481, 285], [494, 285], [481, 263],[494, 269], [501, 267], [508, 188], [516, 160], [509, 188], [534, 186],[553, 152], [541, 175], [568, 157], [568, 127], [542, 59], [544, 0], [512, 0]], dtype = np.uint16)
+    # data_pos = np.array([[512, 0], [562, 0],[562, 50], [512, 50], [512, 0],[512, 100], [562, 100], [562, 50], [562, 0], [512, 0]], dtype = np.uint16)
+    # data_pos = np.array([[513, 0], [578, 14], [627,48 ], [657, 96], [669, 154], [657,213 ], [622, 263], [571, 297], [516, 307], [454, 296], [404, 261], [372,210 ], [360, 149], [373, 93], [407,45 ], [447, 15], [512, 0]], dtype = np.uint16) # circle
+    # data_pos = np.array([[512, 0], [512, 5], [517,5 ], [517, 0], [512, 0]], dtype = np.uint16) # circle
+    # data_pos = np.array([[512, 0], [570, 0], [512, 0], [560, 20], [512, 0], [550, 40],[512, 0],[540, 70],[512, 0],[530, 80],[512, 0],[520, 90],[512, 0],[512, 100],[512, 0]], dtype = np.uint16)
+
+
+    # data_pos = np.array([[404, 158], [417, 164],[512, 0]], dtype = np.uint16)
+    # data_pos = np.array([[400, 0],[400, 200], [200, 200], [200, 0], [400, 0]], dtype = np.uint16)
     # maybe verify that arrays are of the same size
     return data_color, data_pos
 
 def send_move_data(ser):
     data_color, data_pos = get_data()
-    size = np.array([data_color.size], dtype=np.uint16)
+    size = np.array([len(data_pos)], dtype=np.uint16)
 
     send_buffer = bytearray([])
     i = 0
@@ -153,8 +166,11 @@ def send_move_data(ser):
         i = i+1
     
     print("Sending move data to the e-puck...")
+    ser.reset_input_buffer()
+    ser.reset_output_buffer()
     ser.write(b'MOVE')
     ser.write(struct.pack('<h',size[0]))
+
     ser.write(send_buffer)
     print("Move data sent.")
 
@@ -173,10 +189,9 @@ def main():
 
     while True:
         command = input("Type a command")
-        # send_command(ser, command)
-        send_move_data(ser)
-        #send_command(ser, command)
-        #print(ser.readline().decode("utf-8"))
+        send_command(ser, command)
+        if command == 'G':
+            send_move_data(ser)
 if __name__=="__main__":
     main()
     
