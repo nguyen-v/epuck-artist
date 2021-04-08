@@ -23,6 +23,7 @@
 #include <main.h>
 #include <mod_communication.h>
 #include <mod_data.h>
+#include <mod_state.h>
 
 // test
 #include <motors.h>
@@ -71,63 +72,62 @@ static void init_all(void)
  *
  * @param[in] 	cmd 	Command. Possible commands listed in module constants.
  */
-static void process_command(uint8_t cmd)
-{
-	cartesian_coord* pos;
-	uint16_t length;
-	switch(cmd) {
-		case CMD_RESET:
-			palClearPad(GPIOD, GPIOD_LED1);
-			chThdSleepMilliseconds(1000);
-			palSetPad(GPIOD, GPIOD_LED1);
-			chprintf((BaseSequentialStream *)&SDU1, "RESET \r \n");
-			break;
-		case CMD_PAUSE:
-			pos = data_get_pos();
-			draw_set_init_length(100);
-			break;
-		case CMD_CONTINUE:
-			break;
-		case CMD_CALIBRATE:
-			draw_reset();
-			break;
-		case CMD_GET_DATA:
-			com_receive_data((BaseSequentialStream *)&SD3);
-			break;
-		case CMD_DRAW:
-			pos = data_get_pos();
-			length = data_get_length();
-			for(uint16_t i = 0; i<length;++i) {
+//static void process_command(uint8_t cmd)
+//{
+//	cartesian_coord* pos;
+//	uint16_t length;
+//	switch(cmd) {
+//		case CMD_RESET:
+//			palClearPad(GPIOD, GPIOD_LED1);
+//			chThdSleepMilliseconds(1000);
+//			palSetPad(GPIOD, GPIOD_LED1);
+//			chprintf((BaseSequentialStream *)&SDU1, "RESET \r \n");
+//			break;
+//		case CMD_PAUSE:
+//			pos = data_get_pos();
+//			draw_set_init_length(100);
+//			break;
+//		case CMD_CONTINUE:
+//			break;
+//		case CMD_CALIBRATE:
+//			draw_reset();
+//			break;
+//		case CMD_GET_DATA:
+//			com_receive_data((BaseSequentialStream *)&SD3);
+//			break;
+//		case CMD_DRAW:
+//			pos = data_get_pos();
+//			length = data_get_length();
+//			for(uint16_t i = 0; i<length;++i) {
 //				draw_move(pos[i].x, pos[i].y);
-//				chThdSleepMilliseconds(500);
-			}
+//			}
+//
+//			break;
+//		case CMD_INTERACTIVE:
+//			draw_move(512, 0);
+//			break;
+//		default:
+//			chprintf((BaseSequentialStream *)&SDU1, "Invalid command");
+//			break;
+//	}
+//}
 
-			break;
-		case CMD_INTERACTIVE:
-			draw_move(512, 0);
-			break;
-		default:
-			chprintf((BaseSequentialStream *)&SDU1, "Invalid command");
-			break;
-	}
-}
-
-
-static void timer11_start(void){
-    //General Purpose Timer configuration
-    //timer 11 is a 16 bit timer so we can measure time
-    //to about 65ms with a 1Mhz counter
-    static const GPTConfig gpt11cfg = {
-        1000000,        /* 1MHz timer clock in order to measure uS.*/
-        NULL,           /* Timer callback.*/
-        0,
-        0
-    };
-
-    gptStart(&GPTD11, &gpt11cfg);
-    //let the timer count to max value
-    gptStartContinuous(&GPTD11, 0xFFFF);
-}
+//
+//static void timer11_start(void){
+//    //General Purpose Timer configuration
+//    //timer 11 is a 16 bit timer so we can measure time
+//    //to about 65ms with a 1Mhz counter
+//    static const GPTConfig gpt11cfg = {
+//        1000000,        /* 1MHz timer clock in order to measure uS.*/
+//        NULL,           /* Timer callback.*/
+//        0,
+//        0
+//    };
+//
+//    gptStart(&GPTD11, &gpt11cfg);
+//    //let the timer count to max value
+//    gptStartContinuous(&GPTD11, 0xFFFF);
+//}
 
 /*===========================================================================*/
 /* Module threads.                                                   		 */
@@ -166,10 +166,11 @@ int main(void)
 //	draw_set_init_length();
 //	draw_reset();
 	chThdSleepMilliseconds(2000);
+	create_thd_process_cmd();
 //	draw_move(0, 0);
 
 	while(1) {
-		process_command(com_receive_command((BaseSequentialStream *)&SD3));
+//		process_command(com_receive_command((BaseSequentialStream *)&SD3));
 		chThdSleepMilliseconds(CMD_PERIOD);
 //		process_command(com_receive_command((BaseSequentialStream *)&SD3));
 //			chprintf((BaseSequentialStream *)&SDU1, "right motor step %d \r \n", right_motor_get_pos());
