@@ -18,10 +18,11 @@
 #define IM_LENGTH_PX 100
 #define IM_HEIGHT_PX 90
 
-const uint8_t dx[] = {-1, 0, +1, -1};
-const uint8_t dy[] = {0, +1, +1, +1};
+const uint8_t dx[] = {0, -1, +1, -1};
+const uint8_t dy[] = {-1, 0, -1, -1};
 
 static uint8_t label[IM_LENGTH_PX*IM_HEIGHT_PX] = {0};
+static uint8_t count_lab[IM_LENGTH_PX*IM_HEIGHT_PX] = {0};
 
 
 
@@ -31,55 +32,61 @@ static uint8_t label[IM_LENGTH_PX*IM_HEIGHT_PX] = {0};
  * 				This algorithm uses a 8 neighbour checking system and raster scanning to attribute labels to defined edges.
  *
  */
-void edge_scanning(uint8_t img_buffer){
+uint8_t edge_scanning(uint8_t img_buffer, uint8_t count_lab){
 
 	uint8_t counter = 1;
-	uint16_t count_lab[sizeof(uint16_t)];
 	for(uint8_t x=1; x<IM_LENGTH_PX;++x){
 		for(uint8_t y=1; y<IM_HEIGHT_PX;++y){
 			if(img_buffer[position(x,y)]){
 				if(!img_buffer[position(x+dx[0],y+dy[0])]){
 					if(img_buffer[position(x+dx[1],y+dy[1])]){
-						// -----------------
+						label[position(x,y)] = label[position(x+dx[1],y+dy[1])];
+						if(img_buffer[position(x+dx[2],y+dy[2])])
+							merge(count_lab,label[position(x,y)],label[position(x+dx[2],y+dy[2])]);
 					}
 					else{
 						if(img_buffer[position(x+dx[2],y+dy[2])]){
-							// --------------------------
-
+						label[position(x,y)] = label[position(x+dx[2],y+dy[2])];
+						if(img_buffer[position(x+dx[3],y+dy[3])])
+							merge(count_lab,label[position(x,y)],label[position(x+dx[3],y+dy[3])]);
 						}
-						if(img_buffer[position(x+dx[3],y+dy[3])]){
-							// --------------------------
-						} else {
-							label[position(x,y)] = counter;
-							p[counter] = counter;
-							counter++;
+						else{
+							if(img_buffer[position(x+dx[3],y+dy[3])]){
+								label[position(x,y)] = label[position(x+dx[3],y+dy[3])];
+							}
+							else{
+								label[position(x,y)] = counter;
+								count_lab[counter] = counter;
+								++counter;
+							}
 						}
-
 					}
+				}
+				else{
+					label[position(x,y)] = label[position(x+dx[0],y+dy[0])]
 
 				}
-						// This is gonna be fun...
 			}
-
 		}
 	}
-
-
-
-
+	return counter;
 }
 
 
+void path_labelling(uint8_t img_buffer){
 
-void path_labelling(void){
-
-	uint8_t k = 1, root[];
-	k =
-
+	uint8_t counter = 0;
+	counter = edge_scanning(img_buffer,count_lab);
+	flatten(count_lab,counter);
+	for(uint8_t x=0 ;x < IM_LENGTH_PX;x++){
+		for(uint8_t y=0 ; j < IM_HEIGHT_PX;j++){
+			label[position(x,y)]=p[position(x,y)];
+		}
+	}
 }
 
 /**
- * @brief				Captures an image for a given length and height.
+ * @brief
  */
 void path_planning(void){
 
@@ -89,7 +96,7 @@ void path_planning(void){
 
 
 /**
- * @brief				Captures an image for a given length and height.
+ * @brief
  */
 void path_optimization(void){
 
@@ -99,7 +106,7 @@ void path_optimization(void){
 
 
 /**
- * @brief		 	Pick a god and pray.
+ * @brief
  */
 void nearest_neighbour(void){
 
@@ -141,25 +148,20 @@ uint8_t push_back(uint8_t temp_img_val, uint8_t new_img){
 	return newer_img;
 }
 
-void unification(){
+//
+/**
+ * @brief		This function gives the same label to 2 pixels with different labels
+ */
+void merge(uint8_t count_lab, uint8_t x, uint8_t y){
 
-//tbd...
-
-
+	while(count_lab[x]!=count_lab[y]){
+		if(count_lab[x]>count_lab[y])
+			count_lab[rootx]=count_lab[rooty];
+		else
+			count_lab[rooty]=count_lab[rootx];
+	}
 }
 
-
-uint8_t find(){
-
-// tbd...
-
-	return 0;
-}
-
-uint8_t merge(uint8_t old_img){
-
-	return 0;
-}
 
 uint16_t position(uint8_t pox_x, uint8_t pos_y){
 
