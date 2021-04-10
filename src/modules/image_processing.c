@@ -12,8 +12,8 @@
 #include <chprintf.h>
 #include <usbcfg.h>
 #include <camera/po8030.h>
-#include <mod_communication.h>
 #include <include/image_processing.h>
+#include <include/mod_data.h>
 
 /*===========================================================================*/
 /* Module constants.                                                         */
@@ -26,6 +26,7 @@
 #define XY_OFFSET_5x5 2
 #define XY_OFFSET_3x3 1
 #define RAD2DEG 180/M_PI
+#define COEFF 0.5f
 
 // Those threshold values were chosen arbitrarily, more values should be tested if possible
 // After testing, I noticed that low resolution images have a LOT of noise remaining in the final image.
@@ -52,6 +53,8 @@ const int8_t Kx[] = {-1, 0, 1,
 const int8_t Ky[] = {1, 2, 1,
 				   0, 0, 0,
 				   -1, -2, -1};
+
+static uint8_t color_arr[IM_LENGTH_PX*IM_HEIGHT_PX] = {0};
 
 /*===========================================================================*/
 /* Module local functions.                                                   */
@@ -80,15 +83,42 @@ void im_acquisition(){
 uint8_t canny_edge(){
 
 
-	//image conversion from RGB to grayscale//
+	//image conversion from RGB to grayscale + saves the color for each pixel in a separate array//
 	uint8_t *img_buffer = dcmi_get_last_image_ptr();
 	uint8_t img_temp_buffer[(IM_LENGTH_PX*IM_HEIGHT_PX)/2] = {0};
-	uint16_t red, blue, green = 0;
-	for(uint16_t i; i < IM_LENGTH_PX * IM_HEIGHT_PX; i+=2){
-		red = (uint8_t)img_buffer[i/2] & 0xF8;
-		green = (uint8_t)((img_buffer[i/2] & 0x07) || (img_buffer[i/2+1] & 0xe0));
-		blue = (uint8_t)img_buffer[i/2+1] & 0x1F;
-		img_buffer[i/2] = (0.2126 * red) + (0.7152 * green / 2.0) + (0.0722 * blue);
+	uint8_t average_complete = 0;
+	uint16_t red_px, blue_px, green_px, low_threshold[3] = 0;
+	float average[3] ={0};
+	for(uint16_t i = 0; i < IM_LENGTH_PX * IM_HEIGHT_PX; ++i){
+
+		red_px = (uint8_t)img_buffer[i/2] & 0xF8;
+		green_px = (uint8_t)((img_buffer[i/2] & 0x07) || (img_buffer[i/2+1] & 0xe0));
+		blue_px = (uint8_t)img_buffer[i/2+1] & 0x1F;
+
+		average[0] += red_px;
+		average[1] += blue_px;
+		average[2] += (uint8_t)green_px/2;
+		}
+
+	for(uint8_t i=0; i < 3; ++i)
+	low_threshold[i] = (uint16_t)COEFF*average[i];
+
+	for(uint16_t i = 0; i < IM_LENGTH_PX * IM_HEIGHT_PX; i+=2){
+
+		red_px = (uint8_t)img_buffer[i/2] & 0xF8;
+		green_px = (uint8_t)((img_buffer[i/2] & 0x07) || (img_buffer[i/2+1] & 0xe0));
+		blue_px = (uint8_t)img_buffer[i/2+1] & 0x1F;
+
+		if(red_px < low_threshold && blue_px < low_threshold && (uint8_t)green_px/2 < low_threshold)
+			color_arr[i/2] = black;
+		if(red_px > blue_px && red_px > (uint8_t)green_px/2)
+			color_arr[i/2]= red;
+		else if(blue_px > (uint8_t)green_px/2 && blue_px > red_px)
+			color_arr[i/2] =blue;
+		else if((uint8_t) green_px/2 > red_px && (uint8_t) green_px/2 > red_px)
+				color_arr[i/2] = green;
+
+		img_buffer[i/2] = (0.2126 * red_px) + (0.7152 * green_px / 2.0) + (0.0722 * blue_px);
 	}
 
 	// 5x5 Gaussian Filter. A gaussian function is convoluted to the signal
@@ -208,4 +238,6 @@ uint8_t canny_edge(){
 		//returns a pointer to a binary array
 		return *img_buffer;
 	}
+
+
 
