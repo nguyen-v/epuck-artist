@@ -183,6 +183,7 @@ edge_track edge_tracing(){
 			contours[k].pos_y = y;
 			contours[k].label = label[position(x,y)];
 			contours[k].start_end = status;
+
 			x = next_x;
 			y = next_y-1; //goes against y's incrementation
 			++k;
