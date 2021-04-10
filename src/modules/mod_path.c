@@ -19,6 +19,10 @@
 #define IM_LENGTH_PX 100
 #define IM_HEIGHT_PX 90
 
+// This value dictates the efficacity of the path optimization algorithm.
+// A higher value would give us a path with sharp turns while a lower value would give us curved turns
+#define EPSILON 0.02f
+
 const uint8_t dx[] = {0, -1, +1, -1};
 const uint8_t dy[] = {-1, 0, -1, -1};
 
@@ -80,20 +84,12 @@ edge_track edge_tracing(){
 	uint8_t diag_px_priority, temp_x, temp_y, next_x, next_y, last_x, last_y, k, j, used_label_trace = 0;
 	uint8_t start_end, tracing_progress, traced_label[100], next_px, end_found, lap_found = 0;
 	uint16_t priority = 0;
-	px_status status = 0;
-	edge_track contours[1000];
+	enum px_status status = 0;
+	struct edge_track contours[1000] ={0};
 	for(uint8_t x=0 ;x < IM_LENGTH_PX;x++){
 		for(uint8_t y=0 ; y < IM_HEIGHT_PX;y++){
-			if(label[position(x,y)]){
-				traced_label[used_label_trace] = label[position(x,y)];
-				++used_label_trace;
-			}
-			uint8_t temp=0;
-			while(trace_label[temp] != 0){
-				if((label[position(x,y)]) != traced_label[temp]){
-					++temp
-				}
-			}
+			//if(label[position(x,y)]){
+			while(label[position(x,y)]){
 				if(!tracing_progress){
 				temp_x = x;
 				temp_y = y;
@@ -172,33 +168,30 @@ edge_track edge_tracing(){
 //				start_end += (label[position(x-1,y+1)] == label[position(x,y)]) && start_end < 3 ? 1 : 0;
 //				start_end += (label[position(x+1,y+1)] == label[position(x,y)]) && start_end < 3 ? 1 : 0;
 
-			if(start_end){
-			if(start_end == 1)
-				status = edge;
-			else if(start_end == 2) status = line;
-			else break; // A chprintf should be added here in case something abnormal happens with the image processing algorithm, or the labeling process
-			}
+				if(start_end){
+					if(start_end == 1)
+						status = edge;
+					else if(start_end == 2) status = line;
+					else break; // A chprintf should be added here in case something abnormal happens with the image processing algorithm, or the labeling process
+				}
 
-			contours[k].pos_x = x;
-			contours[k].pos_y = y;
-			contours[k].label = label[position(x,y)];
-			contours[k].start_end = status;
-
-			x = next_x;
-			y = next_y-1; //goes against y's incrementation
-			++k;
-			next_px = FALSE;
-			if(status == edge){
-				++j;
-				if(j == 2){
-					x = temp_x;
-					y = temp_y;
-					j = 0;
+				save_pos(*contours, x, y, label[position(x,y)],status,k);
+				label[position(x,y)] = 0; // MAGIC VALUE -> Transforms label into background
+				x = next_x;
+				y = next_y;
+				++k;
+				next_px = FALSE;
+				if(status == edge){
+					++j;
+					if(j == 2){
+						x = temp_x;
+						y = temp_y;
+						j = 0;
+					}
 				}
 			}
 		}
 	}
-
 }
 
 void path_labelling(uint8_t *img_buffer){
@@ -230,11 +223,23 @@ void path_planning(void){
  * @brief This is an implementation of the Douglas-Pucker algorithm which significantly reduces the total number of points
  * 		  in a contour
  */
-void path_optimization(void){
+void path_optimization(struct edge_track *contours){
+
+	float dmax = 0;
+	float d = 0;
+	uint16_t index = 0;
+	for(uint8_t i = 0; i < IM_LENGTH_PX*IM_HEIGHT_PX ; ++i)
+	{
+
+		double d = perpendicular_distance(c)
+	}
 
 
 
+	if(dmax > EPSILON){
 
+
+	}
 
 
 
@@ -305,5 +310,40 @@ uint16_t position(uint8_t pox_x, uint8_t pos_y){
 	return position;
 
 }
+
+void save_pos(struct edge_track *pos, uint8_t x, uint8_t y, uint8_t label,px_status start_end, uint8_t k){
+	pos[k]->pos->pos_x= x;
+	pos[k]->pos->pos_y = y;
+	pos[k]->label = label;
+	pos[k]->start_end = start_end;
+}
+
+uint16_t perpendicular_distance(struct px_pos start, struct px_pos end, struct px_pos point){
+
+	uint8_t line_x = end.pos_x - start.pos_x;
+	uint8_t line_y = end.pos_y - start.pos_y;
+
+	uint8_t vec_x = point.pos_x - start.pos_x;
+	uint8_t vec_y = point.pos_y - start.pos_y;
+
+	uint8_t vec_x2 = point.pos_x - end.pos_x;
+	uint8_t vec_y2 = point.pos_x - end.pos_y;
+
+	uint16_t dot_prod1 = (line_x * vec_x + line_y * vec_y);
+	uint16_t dot_prod2 = (line_x * vec_x2 + line_y * vec_y2);
+
+	uint16_t distance = 0;
+
+	if (dot_prod1 > 0)
+		distance = arm_sqrt_q15(vec_x2*vec_x2 + vec_y2*vec_y2);
+	else if(dot_prod2 < 0)
+		distance =  arm_sqrt_q15(vec_x*vec_x + vec_y*vec_y);
+	else {
+		uint16_t mod = arm_sqrt_q15(line_x*line_x + line_y*line_y);
+		distance = abs(line_x*vec_y - line_y*vec_x) / mod;
+	}
+return distance;
+}
+
 
 
