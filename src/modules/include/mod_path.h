@@ -8,8 +8,21 @@
 #ifndef _MOD_PATH_H_
 #define _MOD_PATH_H_
 
+typedef struct edge_track{
+
+	uint8_t pos_x;
+	uint8_t pos_y;
+	uint16_t label;
+	px_status start_end;	//start = 0, end = 1;
+
+
+};
+
+enum px_status{line = 0, edge = 1};
+
+
 uint8_t edge_scanning(uint8_t img_buffer, uint8_t count_lab);
-void path_labelling(uint8_t img_buffer);
+edge_track path_labelling(uint8_t img_buffer);
 void path_planning(void);
 void path_optimization(void);
 void nearest_neighbour(void);
