@@ -24,7 +24,7 @@
 #define EPSILON 0.02f
 
 const uint8_t dx[] = {0, -1, +1, -1};
-const uint8_t dy[] = {-1, 0, -1, -1};
+const uint8_t dy[] = {-IM_LENGTH_PX, 0, -IM_LENGTH_PX, -IM_LENGTH_PX};
 
 static uint8_t label[IM_LENGTH_PX*IM_HEIGHT_PX] = {0};
 static uint8_t count_lab[IM_LENGTH_PX*IM_HEIGHT_PX] = {0};
@@ -40,28 +40,30 @@ static uint8_t count_lab[IM_LENGTH_PX*IM_HEIGHT_PX] = {0};
 
 uint8_t edge_scanning(uint8_t *img_buffer, uint8_t *count_lab){
 
+	uint16_t pos = 0;
 	uint8_t counter = 1;
 	for(uint8_t x=1; x<IM_LENGTH_PX;++x){
 		for(uint8_t y=1; y<IM_HEIGHT_PX;++y){
-			if(img_buffer[position(x,y)]){
-				if(!img_buffer[position(x+dx[0],y+dy[0])]){
-					if(img_buffer[position(x+dx[1],y+dy[1])]){
-						label[position(x,y)] = label[position(x+dx[1],y+dy[1])];
-						if(img_buffer[position(x+dx[2],y+dy[2])])
-							merge(&count_lab,label[position(x,y)],label[position(x+dx[2],y+dy[2])]);
+			pos = position(x,y);
+			if(img_buffer[pos]){
+				if(!img_buffer[pos + dx[0] + dy[0] ]){
+					if(img_buffer[pos + dx[1] + dy[1]]){
+						label[pos] = label[pos + dx[1] + dy[1]];
+						if(img_buffer[pos + dx[2] + dy[2]])
+							merge(&count_lab,label[pos],label[pos + dx[2] + dy[2]]);
 					}
 					else{
-						if(img_buffer[position(x+dx[2],y+dy[2])]){
-						label[position(x,y)] = label[position(x+dx[2],y+dy[2])];
-						if(img_buffer[position(x+dx[3],y+dy[3])])
-							merge(&count_lab,label[position(x,y)],label[position(x+dx[3],y+dy[3])]);
+						if(img_buffer[pos + dx[2] + dy[2]]){
+						label[pos] = label[pos + dx[2] + dy[2]];
+						if(img_buffer[pos + dx[3] + dy[3]])
+							merge(&count_lab,label[pos],label[pos + dx[3] + dy[3]]);
 						}
 						else{
-							if(img_buffer[position(x+dx[3],y+dy[3])]){
-								label[position(x,y)] = label[position(x+dx[3],y+dy[3])];
+							if(img_buffer[pos + dx[3] + dy[3]]){
+								label[pos] = label[pos + dx[3] + dy[3]];
 							}
 							else{
-								label[position(x,y)] = counter;
+								label[pos] = counter;
 								count_lab[counter] = counter;
 								++counter;
 							}
@@ -69,7 +71,7 @@ uint8_t edge_scanning(uint8_t *img_buffer, uint8_t *count_lab){
 					}
 				}
 				else{
-					label[position(x,y)] = label[position(x+dx[0],y+dy[0])];
+					label[pos] = label[pos + dx[0] + dy[0]];
 
 				}
 			}
@@ -79,23 +81,24 @@ uint8_t edge_scanning(uint8_t *img_buffer, uint8_t *count_lab){
 }
 
 
-edge_track edge_tracing(){
+struct edge_track edge_tracing(){
 
 	uint8_t diag_px_priority, temp_x, temp_y, next_x, next_y, last_x, last_y, k, j, used_label_trace = 0;
 	uint8_t start_end, tracing_progress, traced_label[100], next_px, end_found, lap_found = 0;
-	uint16_t priority = 0;
+	uint16_t priority, pos = 0;
 	enum px_status status = 0;
 	struct edge_track contours[1000] ={0};
 	for(uint8_t x=0 ;x < IM_LENGTH_PX;x++){
 		for(uint8_t y=0 ; y < IM_HEIGHT_PX;y++){
 			//if(label[position(x,y)]){
-			while(label[position(x,y)]){
+			pos = position(x,y);
+			while(label[pos]){
 				if(!tracing_progress){
 				temp_x = x;
 				temp_y = y;
 				tracing_progress = TRUE;
 				}
-				if(label[position(x,y-1)] == label[position(x,y)]){
+				if(label[pos - IM_LENGTH_PX] == label[pos]){
 					if(x != last_x && y-1 != last_y && next_px == FALSE){
 						next_x = x;
 						next_y = y-1;
@@ -103,7 +106,7 @@ edge_track edge_tracing(){
 					}
 					++start_end;
 				}
-				if(label[position(x-1,y)] == label[position(x,y)]){
+				if(label[pos - 1] == label[pos]){
 					if(x-1 != last_x && y != last_y && next_px == FALSE){
 						next_x = x-1;
 						next_y = y;
@@ -111,7 +114,7 @@ edge_track edge_tracing(){
 					}
 					++start_end;
 				}
-				if((label[position(x+1,y)] == label[position(x,y)]) && start_end < 3){
+				if((label[pos + 1] == label[pos]) && start_end < 3){
 					if(x+1 != last_x && y != last_y && next_px == FALSE){
 						next_x = x+1;
 						next_y = y;
@@ -119,7 +122,7 @@ edge_track edge_tracing(){
 					}
 					++start_end;
 				}
-				if((label[position(x,y+1)] == label[position(x,y)]) && start_end < 3){
+				if((label[pos + IM_LENGTH_PX] == label[pos]) && start_end < 3){
 					if(x != last_x && y+1 != last_y && next_px == FALSE){
 						next_x = x;
 						next_y = y+1;
@@ -131,7 +134,7 @@ edge_track edge_tracing(){
 				if(start_end)
 					diag_px_priority = 1;
 
-				if((label[position(x+1,y-1)] == label[position(x,y)]) && start_end < 3){
+				if((label[pos + 1 + IM_LENGTH_PX] == label[pos]) && start_end < 3){
 					if(x != last_x && y+1 != last_y && diag_px_priority && next_px == FALSE){
 						next_x = x;
 						next_y = y+1;
@@ -139,7 +142,7 @@ edge_track edge_tracing(){
 					}
 					++start_end;
 				}
-				if((label[position(x-1,y-1)] == label[position(x,y)]) && start_end < 3){
+				if((label[pos - 1 - IM_LENGTH_PX] == label[pos]) && start_end < 3){
 					if(x != last_x && y+1 != last_y && diag_px_priority && next_px == FALSE){
 						next_x = x;
 						next_y = y+1;
@@ -147,7 +150,7 @@ edge_track edge_tracing(){
 					}
 					++start_end;
 				}
-				if((label[position(x-1,y+1)] == label[position(x,y)]) && start_end < 3){
+				if((label[pos - 1 + IM_LENGTH_PX] == label[pos]) && start_end < 3){
 					if(x != last_x && y+1 != last_y && diag_px_priority && next_px == FALSE){
 						next_x = x;
 						next_y = y+1;
@@ -155,7 +158,7 @@ edge_track edge_tracing(){
 					}
 					++start_end;
 				}
-				if((label[position(x+1,y+1)] == label[position(x,y)]) && start_end < 3){
+				if((label[pos + 1 + IM_LENGTH_PX] == label[pos]) && start_end < 3){
 					if(x != last_x && y+1 != last_y && diag_px_priority && next_px == FALSE){
 						next_x = x;
 						next_y = y+1;
@@ -175,10 +178,11 @@ edge_track edge_tracing(){
 					else break; // A chprintf should be added here in case something abnormal happens with the image processing algorithm, or the labeling process
 				}
 
-				save_pos(*contours, x, y, label[position(x,y)],status,k);
+				save_pos(*contours, x, y, label[pos],status,k);
 				label[position(x,y)] = 0; // MAGIC VALUE -> Transforms label into background
 				x = next_x;
 				y = next_y;
+				pos = position(x,y);
 				++k;
 				next_px = FALSE;
 				if(status == edge){
@@ -207,6 +211,60 @@ void path_labelling(uint8_t *img_buffer){
 }
 
 /**
+ * @brief This is an implementation of the recursive Douglas-Pucker algorithm which significantly reduces the total number of points
+ * 		  in a contour.
+ */
+uint16_t path_optimization(struct edge_track *contours,  uint16_t start, uint16_t end){
+
+	float dmax = 0;
+	float distance = 0;
+	uint16_t index = 0;
+	for(uint16_t i = start; i <= end  ; ++i)
+	{
+
+		distance = perpendicular_distance(contours[start], contours[end], contours[i]);
+		if(distance > dmax) {
+			index = i;
+			dmax = distance;
+		}
+	}
+
+	uint16_t full_size = (end-start);
+	uint16_t *resultList = malloc((full_size)*sizeof(uint16_t));
+	uint16_t res1_size = (index - start);
+	uint16_t *recResults1 = malloc(res1_size*sizeof(uint16_t));
+	uint16_t res2_size = (end-index);
+	uint16_t *recResults2 = malloc(res2_size*sizeof(uint16_t));
+
+	// Do not forget to find a way to free them in the main path_finding function !!!! //
+
+	if(dmax > EPSILON){
+		// Appel récursif
+		recResults1 = path_optimization(&contours, start, index);
+		recResults2 = path_optimization(&contours, index, end);
+		resultList = array_concatenation(resultList,recResults1,recResults2,res1_size,res2_size);
+	}
+	else {
+		resultList = array_concatenation(resultList,contours[0],contours[end],1,1);
+	}
+	return resultList;
+}
+
+
+/**
+ * @brief   Implementation of the nearest neighbour algorithm. It depends on the position of the start and the end points.
+ */
+void nearest_neighbour(void){
+
+
+
+
+
+
+}
+
+
+/**
  * @brief
  */
 void path_planning(void){
@@ -219,42 +277,7 @@ void path_planning(void){
 }
 
 
-/**
- * @brief This is an implementation of the Douglas-Pucker algorithm which significantly reduces the total number of points
- * 		  in a contour
- */
-void path_optimization(struct edge_track *contours){
 
-	float dmax = 0;
-	float d = 0;
-	uint16_t index = 0;
-	for(uint8_t i = 0; i < IM_LENGTH_PX*IM_HEIGHT_PX ; ++i)
-	{
-
-		double d = perpendicular_distance(c)
-	}
-
-
-
-	if(dmax > EPSILON){
-
-
-	}
-
-
-
-}
-
-
-/**
- * @brief   tbd...
- */
-void nearest_neighbour(void){
-
-
-
-
-}
 
 /**
  * @brief				This function transforms an array of arrays into a single array of 1 dimension elements
@@ -343,6 +366,17 @@ uint16_t perpendicular_distance(struct px_pos start, struct px_pos end, struct p
 		distance = abs(line_x*vec_y - line_y*vec_x) / mod;
 	}
 return distance;
+}
+
+
+
+void *array_concatenation(uint16_t *result, uint16_t *res1, uint16_t *res2, uint16_t size1, uint16_t size2){
+
+	    memcpy(result, res1, size1*sizeof(uint16_t));
+	    memcpy(result + size1, res2, size2*sizeof(uint16_t));
+	    return result;
+
+
 }
 
 
