@@ -66,9 +66,6 @@ float perpendicular_distance(struct px_pos start, struct px_pos end, struct px_p
 	uint16_t vec_x = point.pos_x - start.pos_x;
 	uint16_t vec_y = point.pos_y - start.pos_y;
 
-	uint16_t dot_prod1 = (line_x * vec_x + line_y * vec_y);
-	uint16_t dot_prod2 = (line_x * vec_x2 + line_y * vec_y2);
-
 	float cross_prod_1 = (line1*vec_y)-(line2*vec_x);
 	float dot_prod = line1*line1 + line2*line2;
 
