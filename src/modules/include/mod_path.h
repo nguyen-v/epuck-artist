@@ -54,5 +54,6 @@ void save_pos(struct edge_track *pos, uint8_t x, uint8_t y, uint8_t label, enum 
 void save_edge_pos(struct edge_pos *pos, uint8_t x, uint8_t y, uint8_t curve_index, uint8_t this_index);
 void swap(uint16_t *edges1, uint16_t *edges2);
 
+
 #endif /* _MOD_PATH_H_ */
 

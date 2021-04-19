@@ -421,6 +421,7 @@ struct path_motor *path_planning(uint8_t *img_buffer, struct path_motor *final_p
 
 	//---------------------- This part reorganizes the edges' positions. With this, we know how to read the contours table -----------//
 
+
 	enum edge_status status[size_edges];
 	memset(status, 0, size_edges*sizeof(struct edge_track));
 
