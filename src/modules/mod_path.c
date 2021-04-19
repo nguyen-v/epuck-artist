@@ -30,7 +30,6 @@ static uint8_t count_lab[IM_LENGTH_PX*IM_HEIGHT_PX] = {0};
 
 static uint16_t size_contours = 0;
 static uint16_t size_edges = 0;
-static uint16_t opt_size_contours = 0;//Those static values should be utilized in order to alloc the necessary memory for the countour and the edge arrays
 
 
 /**
@@ -95,7 +94,11 @@ void path_labelling(uint8_t *img_buffer){
 }
 
 
-
+/**
+ * @brief This algorithm defines and isolates all the contours from the background. when a contour point is found, it checks for all the neighbours in a 8 pixel
+ * 		  area around it and follows the countour until it reaches the edge. With this algorithm, we can tell apart edges from simple lines depending on the number
+ * 		  of neighbours around them.
+ */
 void edge_tracing(struct edge_track *contours, struct edge_pos *edges){
 
 	uint8_t diag_px_priority, temp_x, temp_y, next_x, next_y, last_x, last_y,j, k = 0;
@@ -219,8 +222,10 @@ void edge_tracing(struct edge_track *contours, struct edge_pos *edges){
 }
 
 /**
- * @brief This is an implementation of the recursive Douglas-Pucker algorithm which significantly reduces the total number of points
- * 		  in a contour.
+ * @brief This is an implementation of a path optimization algorithm which significantly reduces the total number of points
+ * 		  in a contour. This is accomplished by measuring the maximum perpendicular distance between two point boundaries and all the other points
+ * 		  in a chosen countour, then remeasure the max perpendicular distance between two obtained curves given by the [start;index] points and the [index;end] points.
+ * 		  The EPSILON threshold can be varied and is used in order to choose which points will be cut. The higher the value, the sharpest our contour will be.
  */
 uint16_t path_optimization(struct edge_track *contours, uint16_t size, struct edge_track* dest, uint16_t destlen){
 
@@ -258,14 +263,16 @@ uint16_t path_optimization(struct edge_track *contours, uint16_t size, struct ed
 
 
 /**
- * @brief   Implementation of the nearest neighbour algorithm. It depends on the position of the start and the end points.
- * 			WHO CARES ABOUT WHAT IT DOES ? IT DOESN'T WORK NO MATTER HOW I IMPLEMENT IT FUCK FUCK FUCK FUCK FUCK FUCK FUCK FUCK...
+ * @brief   Implementation of the nearest neighbour algorithm. It calculates the shortest distance between its actual point and all other start/end points
+ * 			If it finds one, the algorithm switches their index position in the edge_index array, notes both edges of the contour as being visited
+ * 			and recalculates the distance from the newly found point to all the other unvisited points.
+ *
  */
+void nearest_neighbour(struct edge_pos *edges, uint16_t *edge_index, enum edge_status *status){
 
+	uint16_t visited[size_edges];
+	memset(visited, 0, size_edges*sizeof(struct edge_track));
 
-void nearest_neighbour(struct edge_pos *edges, uint16_t *edge_index){
-
-	uint16_t visited[size_edges] = {0};
 	visited[0] = 1;
 
 	uint16_t dmin,d = 0;
@@ -274,18 +281,17 @@ void nearest_neighbour(struct edge_pos *edges, uint16_t *edge_index){
 
 	uint16_t counter_temp = (size_edges - 1) / 2;
 
-	While(!algo_finished){
+	while(!algo_finished){
 
 		uint16_t k = 0;
 
 		uint16_t index = 0;
-		struct edge_pos temp = {0};
 
 		for(uint16_t i = 0; i < size_edges; ++i){
 
 			if(!visited[i]){
 
-				d = two_point_distance(edges[k], edges[i]);
+				d = two_point_distance(edges[k].pos, edges[i].pos);
 				if(dmin == 0)
 					dmin = d;
 				if(d <= dmin){
@@ -296,20 +302,34 @@ void nearest_neighbour(struct edge_pos *edges, uint16_t *edge_index){
 		}
 		if(index%2==0){
 			//swap(edges[j+1],edges[index]);
-			swap(edge_index[j+1],edge_index[index]);
-			visited[j+1] = 1;
+			uint16_t temp = 0;
+			temp = edge_index[j];
+			edge_index[j] = edge_index[index];
+			edge_index[index] = temp;
+			status[j] = end;
+			visited[index] = 1;
 			//swap(edges[j],edges[index-1]);
-			swap(edge_index[j],edge_index[index-1]);
-			visited[j] = 1;
+			temp = edge_index[j+1];
+			edge_index[j+1] = edge_index[index-1];
+			edge_index[index-1] = temp;
+			status[j+1] = start;
+			visited[index-1] = 1;
 			k = index - 1;
 		}
 		else {
 			//swap(edges[j],edges[index]);
-			swap(edge_index[j],edge_index[index]);
-			visited[j] = 1;
+			uint16_t temp = 0;
+			temp = edge_index[j];
+			edge_index[j] = edge_index[index];
+			edge_index[index] = temp;
+			status[j] = start;
+			visited[index] = 1;
 			//swap(edges[j+1],edges[index+1]);
-			swap(edge_index[j+1],edge_index[index+1]);
-			visited[j] = 1;
+			temp = edge_index[j+1];
+			edge_index[j+1] = edge_index[index+1];
+			edge_index[index+1] = temp;
+			status[j+1] = end;
+			visited[index + 1] = 1;
 			k = index + 1;
 		}
 		if(counter_temp == size_edges){
@@ -320,11 +340,11 @@ void nearest_neighbour(struct edge_pos *edges, uint16_t *edge_index){
 }
 
 
-void swap(struct px_pos *edges1, struct px_pos *edges2){
+void swap(uint16_t *edges1, uint16_t *edges2){
 	uint16_t temp = 0;
-	temp = edges1;
+	temp = *edges1;
 	edges1 = edges2;
-	edges2 = temp;
+	*edges2 = temp;
 }
 
 
@@ -334,18 +354,17 @@ void swap(struct px_pos *edges1, struct px_pos *edges2){
  * @brief			This functions utilizes all the other functions defined above in order to implement the complete path finding program
  */
 
-struct path_motor path_planning(uint8_t *img_buffer){
+struct path_motor *path_planning(uint8_t *img_buffer, struct path_motor *final_path){
 
-	struct edge_track *contours[5000] ={0};			// Unless we find a way to quantify it, the size of this array will be chosen arbitrarily
-	struct edge_pos *edges[5000] = {0};				// The same goes for this array
+	struct edge_track *contours = (struct edge_track*)malloc(5000*sizeof(struct edge_track));			// Unless we find a way to quantify it, the size of this array will be chosen arbitrarily
+	struct edge_pos *edges = (struct edge_pos*)malloc(5000*sizeof(struct edge_pos));			// The same goes for this array
 													// Though both can be realocated later on...
-	edges[0]->pos.pos_x = INIT_ROBPOS_PX;
-	edges[0]->pos.pos_y = INIT_ROBPOS_PY;
+	edges[0].pos.pos_x = INIT_ROBPOS_PX;
+	edges[0].pos.pos_y = INIT_ROBPOS_PY;
 	++size_edges;
 
 	//----------- This part labels the contours and extracts them into one single array conveniently named "Contours" ---------------//
 
-	uint16_t result_size = 0;
 	path_labelling(img_buffer);
 	edge_tracing(contours, edges);
 	edges = (struct edge_pos*)realloc(edges, size_edges*sizeof(struct edge_pos));
@@ -359,9 +378,14 @@ struct path_motor path_planning(uint8_t *img_buffer){
 
 	for(uint8_t i = 0; i < size_edges/2; ++i){
 		uint16_t k = 0;
-		uint16_t length = edges[i*2 + 1]->index - edges[i*2]->index + 1;
-		struct edge_track res_out[length] = {0};
-		struct edge_track *new_contour = (struct edge_track*)malloc(length*sizeof(struct edge_track));
+		uint16_t length = edges[i*2 + 1].index - edges[i*2].index + 1;
+
+		struct edge_track res_out[length];
+		memset(res_out, 0, length*sizeof(struct edge_track));
+
+		struct edge_track new_contour[length];
+		memset(new_contour, 0, length*sizeof(struct edge_track));
+
 		for(uint8_t n = 0; n < length; ++n){
 			new_contour[n] = contours[contours_size + n];
 		}
@@ -374,7 +398,6 @@ struct path_motor path_planning(uint8_t *img_buffer){
 				++k;
 		}
 		total_size += final_size;
-		free(new_contour);
 	}
 	contours = (struct edge_track*)realloc(contours,total_size*sizeof(struct edge_track));
 
@@ -382,12 +405,14 @@ struct path_motor path_planning(uint8_t *img_buffer){
 	//-------------------------------- This part decides the final path of the robot -----------------------//
 
 	// We must first find the position of each and every edge again
-	uint16_t edge_index[size_edges] = {0};
+	uint16_t edge_index[size_edges];
+	memset(edge_index, 0, size_edges*sizeof(uint16_t));
+
 	uint16_t k = 1;
 	edge_index[0] = 0;
 	edge_index[size_edges - 1] = total_size - 1;
 	for(uint8_t i = 1; i < size_edges-1; ++i){
-		if(contours[i]->label != contours[i-1]->label){
+		if(contours[i].label != contours[i-1].label){
 			edge_index[k] = i-1;
 			edge_index[++k] = i;
 			++k;
@@ -395,14 +420,29 @@ struct path_motor path_planning(uint8_t *img_buffer){
 	}
 
 	//---------------------- This part reorganizes the edges' positions. With this, we know how to read the contours table -----------//
-	nearest_neighbor(edges, edge_index);
 
-	for(uint8_t i = 0; i < total_size; ++i){
+	enum edge_status status[size_edges];
+	memset(status, 0, size_edges*sizeof(struct edge_track));
 
+	status[0] = init;
+	nearest_neighbour(edges, edge_index, status);
+	final_path = (struct path_motor*)realloc(final_path,total_size*sizeof(struct path_motor));
 
-
+	for(uint8_t i = 0; i < size_edges; i+=2){
+		if(status[i] == start){
+			for(uint16_t j = edge_index[i]; j <= edge_index[i+1]; ++j)
+				final_path[j].pos = contours[j].pos;
+		} else {
+			if(status[i] == end){
+				for(uint16_t j = edge_index[i]; j >= edge_index[i+1]; --j)
+					final_path[j].pos = contours[j].pos;
+			}
+		}
 	}
-	return path;
+
+	free(contours);
+	free(edges);
+	return final_path;
 }
 
 
