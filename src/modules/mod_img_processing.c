@@ -1,5 +1,5 @@
 /**
- * @file    img_process.c
+ * @file    mod_img_processing.c
  * @brief   Handles the capture and the processing of an image.
  */
 
@@ -12,8 +12,12 @@
 #include <chprintf.h>
 #include <usbcfg.h>
 #include <camera/po8030.h>
-#include <include/image_processing.h>
 #include <include/mod_data.h>
+#include "camera/dcmi_camera.h"
+#include <arm_math.h>
+#include <modules/include/mod_image_processing.h>
+#include "ch.h"
+#include "hal.h"
 
 /*===========================================================================*/
 /* Module constants.                                                         */
@@ -54,17 +58,18 @@ const int8_t Ky[] = {1, 2, 1,
 				   0, 0, 0,
 				   -1, -2, -1};
 
-static uint8_t color_arr[IM_LENGTH_PX*IM_HEIGHT_PX] = {0};
 
 /*===========================================================================*/
 /* Module local functions.                                                   */
 /*===========================================================================*/
 
 /**
- * @brief				Captures an image for a given length and height.
+ * @brief				Captures a single image for a given length and height.
+ * 						Those function do not work unless they are put within a thread....
  */
-void im_acquisition(){
+void im_acquisition()
 
+{
 		po8030_advanced_config(FORMAT_RGB565, 0, 10, IM_LENGTH_PX, IM_HEIGHT_PX, SUBSAMPLING_X1, SUBSAMPLING_X1);
 		dcmi_enable_double_buffering();
 		dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
@@ -80,16 +85,16 @@ void im_acquisition(){
 /**
  * @brief				Initalizes all modules.
  */
-uint8_t canny_edge(){
+uint8_t *canny_edge(uint8_t *img_buffer, enum colour *color){
 
 
 	//image conversion from RGB to grayscale + saves the color for each pixel in a separate array//
-	uint8_t *img_buffer = dcmi_get_last_image_ptr();
-	uint8_t img_temp_buffer[(IM_LENGTH_PX*IM_HEIGHT_PX)/2] = {0};
-	uint8_t average_complete = 0;
-	uint16_t red_px, blue_px, green_px, low_threshold[3] = 0;
+	img_buffer = dcmi_get_last_image_ptr();
+	uint8_t img_temp_buffer[(IM_LENGTH_PX*IM_HEIGHT_PX)] = {0};
+	uint16_t red_px, blue_px, green_px = 0;
+	uint16_t low_threshold[3] = {0};
 	float average[3] ={0};
-	for(uint16_t i = 0; i < IM_LENGTH_PX * IM_HEIGHT_PX; ++i){
+	for(uint16_t i = 0; i < IM_LENGTH_PX * IM_HEIGHT_PX; i+=2){
 
 		red_px = (uint8_t)img_buffer[i/2] & 0xF8;
 		green_px = (uint8_t)((img_buffer[i/2] & 0x07) || (img_buffer[i/2+1] & 0xe0));
@@ -109,14 +114,14 @@ uint8_t canny_edge(){
 		green_px = (uint8_t)((img_buffer[i/2] & 0x07) || (img_buffer[i/2+1] & 0xe0));
 		blue_px = (uint8_t)img_buffer[i/2+1] & 0x1F;
 
-		if(red_px < low_threshold && blue_px < low_threshold && (uint8_t)green_px/2 < low_threshold)
-			color_arr[i/2] = black;
-		if(red_px > blue_px && red_px > (uint8_t)green_px/2)
-			color_arr[i/2]= red;
+		if(red_px < low_threshold[0] && blue_px < low_threshold[1] && (uint8_t)green_px/2 < low_threshold[2])
+			color[i/2] = black;
+		else if(red_px > blue_px && red_px > (uint8_t)green_px/2)
+			color[i/2]= red;
 		else if(blue_px > (uint8_t)green_px/2 && blue_px > red_px)
-			color_arr[i/2] =blue;
+			color[i/2] =blue;
 		else if((uint8_t) green_px/2 > red_px && (uint8_t) green_px/2 > red_px)
-				color_arr[i/2] = green;
+				color[i/2] = green;
 
 		img_buffer[i/2] = (0.2126 * red_px) + (0.7152 * green_px / 2.0) + (0.0722 * blue_px);
 	}
@@ -169,11 +174,10 @@ uint8_t canny_edge(){
 
 
 
-			float z = Ix/Iy;
-			float theta = atanf(Ix / Iy);
+			theta[position] = atanf(Ix / Iy);
 			//theta[position] = (z - (pow(z,3)/3) + (pow(z,5)/5) - (pow(z,7)/7)) * RAD2DEG;//in deg// //using arm_mult_f32 would be a better idea right ?
 			//
-			//After testing, we see that using the atanf function gives precise result for a long processing time whereas the taylor serie takes less time but gives us a butchered result
+			//After testing, we see that using the atanf function gives precise results for a long processing time whereas the taylor serie takes less time but gives us a butchered result
 			//
 			}
 		}
@@ -182,62 +186,63 @@ uint8_t canny_edge(){
 	// given their gradient angle
 
 	float i,j = 0;
-		for(uint8_t x = XY_OFFSET_3x3; x < IM_LENGTH_PX-XY_OFFSET_3x3; ++x){
-			for(uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y){
-				position = x + (y * IM_LENGTH_PX);
-				if((theta[position] <= 22.5 && theta[position] >= -22.5) || (theta[position] <= -157.5 && theta[position] >= 157.5)){
-					i = I_mag[position+1];
-					j = I_mag[position-1];
-				} else if((theta[position] > 22.5 && theta[position] <= 67.5) || (theta[position] <= -112.5 && theta[position] > -157.5)){
-					i = I_mag[position + IM_LENGTH_PX +1];
-					j = I_mag[position + IM_LENGTH_PX -1];
-				} else if((theta[position] > 67.5 && theta[position] <= 112.5) || (theta[position] <= -67.5 && theta[position] > -112.5)){
-					i = I_mag[position + IM_LENGTH_PX ];
-					j = I_mag[position - IM_LENGTH_PX ];
-				} else if((theta[position] > 112.5 && theta[position] < 157.5) || (theta[position] < -22.5 && theta[position] >= -67.5)){
-					i = I_mag[position + IM_LENGTH_PX -1 ];
-					j = I_mag[position - IM_LENGTH_PX + 1];
-			}
-			if(i >= I_mag[position] || j >= I_mag[position])
-				img_buffer[position] = 0;
-			else
-				img_buffer[position] = (uint8_t)I_mag[position];
-			}
+	for(uint8_t x = XY_OFFSET_3x3; x < IM_LENGTH_PX-XY_OFFSET_3x3; ++x){
+		for(uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y){
+			position = x + (y * IM_LENGTH_PX);
+			if((theta[position] <= 22.5 && theta[position] >= -22.5) || (theta[position] <= -157.5 && theta[position] >= 157.5)){
+				i = I_mag[position+1];
+				j = I_mag[position-1];
+			} else if((theta[position] > 22.5 && theta[position] <= 67.5) || (theta[position] <= -112.5 && theta[position] > -157.5)){
+				i = I_mag[position + IM_LENGTH_PX +1];
+				j = I_mag[position + IM_LENGTH_PX -1];
+			} else if((theta[position] > 67.5 && theta[position] <= 112.5) || (theta[position] <= -67.5 && theta[position] > -112.5)){
+				i = I_mag[position + IM_LENGTH_PX ];
+				j = I_mag[position - IM_LENGTH_PX ];
+			} else if((theta[position] > 112.5 && theta[position] < 157.5) || (theta[position] < -22.5 && theta[position] >= -67.5)){
+				i = I_mag[position + IM_LENGTH_PX -1 ];
+				j = I_mag[position - IM_LENGTH_PX + 1];
 		}
-
-		// Double threshold - This is used to identify pixel intensities and impose 2 pixel intensities
-
-		for (uint8_t x = 0; x < IM_LENGTH_PX; x++) {
-			for (uint8_t y = 0; y < IM_HEIGHT_PX; y++) {
-				position = x + (y * IM_LENGTH_PX);
-		        if (img_buffer[position] > HIGH_THRESHOLD) {
-		        	img_temp_buffer[position] = HIGH_THRESHOLD;
-		        } else if (img_buffer[position] > LOW_THRESHOLD) {
-		            img_temp_buffer[position] = LOW_THRESHOLD;
-		        } else {
-		            img_temp_buffer[position] = 0;
-		        }
-		    }
+		if(i >= I_mag[position] || j >= I_mag[position])
+			img_buffer[position] = 0;
+		else
+			img_buffer[position] = (uint8_t)I_mag[position];
 		}
-
-		// Edge tracking by hysteresis : weak pixels are transformed into strong pixels if and only if one is present around it
-		for (uint8_t x = 0; x < IM_LENGTH_PX; x++) {
-			for (uint8_t y = 0; y < IM_HEIGHT_PX; y++) {
-				position = x + (y * IM_LENGTH_PX);
-				if(img_temp_buffer[position] == LOW_THRESHOLD){
-					if(img_temp_buffer[position-IM_LENGTH_PX-1] == HIGH_THRESHOLD || img_temp_buffer[position-IM_LENGTH_PX] == HIGH_THRESHOLD ||
-							img_temp_buffer[position-IM_LENGTH_PX+1] == HIGH_THRESHOLD || img_temp_buffer[position-1] == HIGH_THRESHOLD ||
-							img_temp_buffer[position+1] == HIGH_THRESHOLD || img_temp_buffer[position+IM_LENGTH_PX-1] == HIGH_THRESHOLD ||
-							img_temp_buffer[position-IM_LENGTH_PX] == HIGH_THRESHOLD || img_temp_buffer[position+IM_LENGTH_PX+1] == HIGH_THRESHOLD)
-						img_buffer[position] = 1;
-					else if(img_temp_buffer[position] == HIGH_THRESHOLD)
-					img_buffer[position] = 1;
-				else img_buffer[position] = 0;
-			}
-		}
-		//returns a pointer to a binary array
-		return *img_buffer;
 	}
 
+	// Double threshold - This is used to identify pixel intensities and impose 2 pixel intensities
+
+	for (uint8_t x = 0; x < IM_LENGTH_PX; x++) {
+		for (uint8_t y = 0; y < IM_HEIGHT_PX; y++) {
+			position = x + (y * IM_LENGTH_PX);
+	        if (img_buffer[position] > HIGH_THRESHOLD) {
+	        	img_temp_buffer[position] = HIGH_THRESHOLD;
+	        } else if (img_buffer[position] > LOW_THRESHOLD) {
+	            img_temp_buffer[position] = LOW_THRESHOLD;
+	        } else {
+	            img_temp_buffer[position] = 0;
+	        }
+	    }
+	}
+
+	// Edge tracking by hysteresis : weak pixels are transformed into strong pixels if and only if one is present around it
+
+	for (uint8_t x = 0; x < IM_LENGTH_PX; x++) {
+		for (uint8_t y = 0; y < IM_HEIGHT_PX; y++) {
+			position = x + (y * IM_LENGTH_PX);
+			if(img_temp_buffer[position] == LOW_THRESHOLD){
+				if(img_temp_buffer[position-IM_LENGTH_PX-1] == HIGH_THRESHOLD || img_temp_buffer[position-IM_LENGTH_PX] == HIGH_THRESHOLD ||
+						img_temp_buffer[position-IM_LENGTH_PX+1] == HIGH_THRESHOLD || img_temp_buffer[position-1] == HIGH_THRESHOLD ||
+						img_temp_buffer[position+1] == HIGH_THRESHOLD || img_temp_buffer[position+IM_LENGTH_PX-1] == HIGH_THRESHOLD ||
+						img_temp_buffer[position-IM_LENGTH_PX] == HIGH_THRESHOLD || img_temp_buffer[position+IM_LENGTH_PX+1] == HIGH_THRESHOLD)
+					img_buffer[position] = 1;
+				else if(img_temp_buffer[position] == HIGH_THRESHOLD)
+				img_buffer[position] = 1;
+			else img_buffer[position] = 0;
+			}
+		}
+	//returns a pointer to a binary array
+	}
+return img_buffer;
+}
 
 
