@@ -24,6 +24,7 @@
 #include <mod_draw.h>
 #include <mod_communication.h>
 #include <mod_data.h>
+#include <mod_calibration.h>
 
 /*===========================================================================*/
 /* Module constants.                                                         */
@@ -38,6 +39,7 @@
 #define CMD_GET_DATA		'G'
 #define CMD_DRAW			'D'
 #define CMD_INTERACTIVE		'I'
+#define CMD_HOME			'H'
 
 
 
@@ -63,37 +65,47 @@ static thread_t* ptr_process_cmd;
  */
 static void process_command(uint8_t cmd)
 {
-	cartesian_coord* pos;
-	uint16_t length;
+	static uint8_t* color;
+	static float height;
 	switch(cmd) {
 		case CMD_RESET:
 //			palClearPad(GPIOD, GPIOD_LED1);
 //			chThdSleepMilliseconds(1000);
 //			palSetPad(GPIOD, GPIOD_LED1);
 //			chprintf((BaseSequentialStream *)&SDU1, "RESET \r \n");
-			draw_reset();
-			data_free();
+//			draw_reset();
+//			data_free();
+//			draw_stop_thd();
+//			cal_set_init_length();
+//			draw_reset();
 			break;
 		case CMD_PAUSE:
-			draw_set_init_length(100);
+			draw_pause_thd();
 			break;
 		case CMD_CONTINUE:
+			draw_resume_thd();
 			break;
 		case CMD_CALIBRATE:
-			draw_reset();
+			color = data_get_color();
+			draw_set_init_length(color[0]);
+//			height = get_initial_height_cm();
+//			chprintf((BaseSequentialStream *)&SDU1, "init height %f \r \n", height);
 			break;
 		case CMD_GET_DATA:
 			com_receive_data((BaseSequentialStream *)&SD3);
 			break;
 		case CMD_DRAW:
-			pos = data_get_pos();
-			length = data_get_length();
-			for(uint16_t i = 0; i<length;++i) {
-				draw_move(pos[i].x, pos[i].y);
-			}
-
+//			pos = data_get_pos();
+//			length = data_get_length();
+//			for(uint16_t i = 0; i<length;++i) {
+//				draw_move(pos[i].x, pos[i].y);
+//			}
+			draw_create_thd();
+//			cal_create_thd();
 			break;
 		case CMD_INTERACTIVE:
+			break;
+		case CMD_HOME:
 			draw_move(512, 0);
 			break;
 		default:
@@ -129,7 +141,7 @@ static THD_FUNCTION(thd_process_cmd, arg)
 
 void create_thd_process_cmd(void)
 {
-	ptr_process_cmd = chThdCreateStatic(wa_process_cmd, sizeof(wa_process_cmd), NORMALPRIO, thd_process_cmd, NULL);
+	ptr_process_cmd = chThdCreateStatic(wa_process_cmd, sizeof(wa_process_cmd), NORMALPRIO+1, thd_process_cmd, NULL);
 }
 
 

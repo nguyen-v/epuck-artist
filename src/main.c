@@ -26,10 +26,13 @@
 #include <mod_state.h>
 
 // test
+#include <mod_sensors.h>
 #include <motors.h>
 #include "arm_math.h"
 #include <mod_draw.h>
+#include "msgbus/messagebus.h"
 #include "sensors/VL53L0X/VL53L0X.h"
+#include "sensors/proximity.h"
 
 /*===========================================================================*/
 /* Module constants.                                                         */
@@ -49,6 +52,7 @@
 
 #define CMD_PERIOD			100
 
+
 /*===========================================================================*/
 /* Module local functions.                                                   */
 /*===========================================================================*/
@@ -64,70 +68,8 @@ static void init_all(void)
 	usb_start();
 	com_serial_start();
 	motors_init();
-//	VL53L0X_start();
+	sensors_init();
 }
-
-/**
- * @brief				Processes command and calls relevant module functions.
- *
- * @param[in] 	cmd 	Command. Possible commands listed in module constants.
- */
-//static void process_command(uint8_t cmd)
-//{
-//	cartesian_coord* pos;
-//	uint16_t length;
-//	switch(cmd) {
-//		case CMD_RESET:
-//			palClearPad(GPIOD, GPIOD_LED1);
-//			chThdSleepMilliseconds(1000);
-//			palSetPad(GPIOD, GPIOD_LED1);
-//			chprintf((BaseSequentialStream *)&SDU1, "RESET \r \n");
-//			break;
-//		case CMD_PAUSE:
-//			pos = data_get_pos();
-//			draw_set_init_length(100);
-//			break;
-//		case CMD_CONTINUE:
-//			break;
-//		case CMD_CALIBRATE:
-//			draw_reset();
-//			break;
-//		case CMD_GET_DATA:
-//			com_receive_data((BaseSequentialStream *)&SD3);
-//			break;
-//		case CMD_DRAW:
-//			pos = data_get_pos();
-//			length = data_get_length();
-//			for(uint16_t i = 0; i<length;++i) {
-//				draw_move(pos[i].x, pos[i].y);
-//			}
-//
-//			break;
-//		case CMD_INTERACTIVE:
-//			draw_move(512, 0);
-//			break;
-//		default:
-//			chprintf((BaseSequentialStream *)&SDU1, "Invalid command");
-//			break;
-//	}
-//}
-
-//
-//static void timer11_start(void){
-//    //General Purpose Timer configuration
-//    //timer 11 is a 16 bit timer so we can measure time
-//    //to about 65ms with a 1Mhz counter
-//    static const GPTConfig gpt11cfg = {
-//        1000000,        /* 1MHz timer clock in order to measure uS.*/
-//        NULL,           /* Timer callback.*/
-//        0,
-//        0
-//    };
-//
-//    gptStart(&GPTD11, &gpt11cfg);
-//    //let the timer count to max value
-//    gptStartContinuous(&GPTD11, 0xFFFF);
-//}
 
 /*===========================================================================*/
 /* Module threads.                                                   		 */
@@ -156,8 +98,12 @@ static void init_all(void)
 /* Main function.                                                   		 */
 /*===========================================================================*/
 
+
 int main(void)
 {
+
+
+
 	init_all();
 //	timer11_start();
 	//	chThdCreateStatic(wa_process_cmd, sizeof(wa_process_cmd), NORMALPRIO, thd_process_cmd, NULL);
@@ -167,11 +113,40 @@ int main(void)
 //	draw_reset();
 	chThdSleepMilliseconds(2000);
 	create_thd_process_cmd();
+//	create_thd_draw();
 //	draw_move(0, 0);
 
+	uint16_t dist = 0;
+	uint16_t dist_kalman = 0;
+	uint16_t dist_kalman2 = 0;
+	uint16_t dist_kalman3 = 0;
+
+	int prox1 = 0;
+	int prox3 = 0;
+	int prox5 = 0;
+	int prox7 = 0;
+
+
 	while(1) {
-//		process_command(com_receive_command((BaseSequentialStream *)&SD3));
+//		dist = sensors_tof_kalman1d();
+//		chprintf((BaseSequentialStream *)&SDU1, "$%d;", dist);
+//		dist_av = dsp_ema_i32(dist, dist_av, DSP_EMA_I32_ALPHA(0.1));
+//		dist_av2 = dsp_ema_i32(dist, dist_av, DSP_EMA_I32_ALPHA(0.5));
+//		dist_kalman = kalman(dist);
+//		dist_kalman2 = kalman2(dist);
+//		dist_kalman3 = kalman3(dist);
+
+//		prox1 = get_prox(1);
+//		prox3 = get_prox(3);
+//		prox5 = get_prox(5);
+//		prox7 = get_prox(7);
+//		chprintf((BaseSequentialStream *)&SDU1, "$%d %d %d %d;", prox1, prox3, prox5, prox7);
+
+
+//		chprintf((BaseSequentialStream *)&SDU1, "$%d %d %d %d;", dist, dist_kalman, dist_kalman2, dist_kalman3);
 		chThdSleepMilliseconds(CMD_PERIOD);
+
+
 //		process_command(com_receive_command((BaseSequentialStream *)&SD3));
 //			chprintf((BaseSequentialStream *)&SDU1, "right motor step %d \r \n", right_motor_get_pos());
 //		int16_t a = 432;
