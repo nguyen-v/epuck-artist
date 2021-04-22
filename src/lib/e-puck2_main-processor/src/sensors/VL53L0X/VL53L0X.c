@@ -15,8 +15,25 @@
 #include "usbcfg.h"
 
 static uint16_t dist_mm = 0;
+static uint16_t dist_mm_kalman = 0;
 static thread_t *distThd;
 static bool VL53L0X_configured = false;
+
+static uint16_t kalman1d(uint16_t U)
+{
+	static const float R = 6.5;		// covariance of observation noise
+	static const float H = 1.00;		// observation model
+	static float Q = 1.0;				// initial estimated covariance
+	static float P = 0;				// initial error covariance
+	static uint16_t U_hat = 0;			// initial predicted state
+	static float K = 0;
+
+	K = P*H/(H*P*H+R);					// calculate Kalman gain
+	U_hat = U_hat + K*(U-H*U_hat);		// updated state estimate
+	P = (1-K*H)*P +Q;					// updated estimate covariance
+	return U_hat;
+}
+
 
 //////////////////// PUBLIC FUNCTIONS /////////////////////////
 static THD_WORKING_AREA(waVL53L0XThd, 512);
@@ -33,7 +50,7 @@ static THD_FUNCTION(VL53L0XThd, arg) {
 	status = VL53L0X_init(&device);
 
 	if(status == VL53L0X_ERROR_NONE){
-		VL53L0X_configAccuracy(&device, VL53L0X_LONG_RANGE);
+		VL53L0X_configAccuracy(&device, VL53L0X_HIGH_ACCURACY);
 	}
 	if(status == VL53L0X_ERROR_NONE){
 		VL53L0X_startMeasure(&device, VL53L0X_DEVICEMODE_CONTINUOUS_RANGING);
@@ -47,6 +64,7 @@ static THD_FUNCTION(VL53L0XThd, arg) {
     	if(VL53L0X_configured){
     		VL53L0X_getLastMeasure(&device);
    			dist_mm = device.Data.LastRangeMeasure.RangeMilliMeter;
+   			dist_mm_kalman = kalman1d(dist_mm);
     	}
 		chThdSleepMilliseconds(100);
     }
@@ -243,5 +261,9 @@ void VL53L0X_stop(void) {
 
 uint16_t VL53L0X_get_dist_mm(void) {
 	return dist_mm;
+}
+
+uint16_t VL53L0X_get_dist_mm_kalman(void) {
+	return dist_mm_kalman;
 }
 
