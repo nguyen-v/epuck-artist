@@ -58,6 +58,7 @@ const int8_t Ky[] = {1, 2, 1,
 				   0, 0, 0,
 				   -1, -2, -1};
 
+static uint8_t *img_buffer;
 
 /*===========================================================================*/
 /* Module local functions.                                                   */
@@ -67,43 +68,28 @@ const int8_t Ky[] = {1, 2, 1,
  * @brief				Captures a single image for a given length and height.
  * 						Those function do not work unless they are put within a thread....
  */
-static THD_WORKING_AREA(waCaptureProcessImage, 1024);
-static THD_FUNCTION(CaptureProcessImage, arg) {
-
-	chRegSetThreadName(__FUNCTION__);
-	(void)arg;
+void capture_image(){
 
 	po8030_advanced_config(FORMAT_RGB565, 0, 10, IM_LENGTH_PX, IM_HEIGHT_PX, SUBSAMPLING_X1, SUBSAMPLING_X1);
 	dcmi_enable_double_buffering();
 	//dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
 
-	while(1){
-
-		dcmi_capture_start();
-		wait_image_ready();
-		if(image_is_ready()){
-
-		}
-
-
-	}
+	dcmi_capture_start();
+	wait_image_ready();
+	img_buffer = dcmi_get_last_image_ptr();
 }
 
-void img_processing_start(void){
-	chThdCreateStatic(waCaptureProcessImage, sizeof(waCaptureProcessImage), NORMALPRIO, CaptureProcessImage, NULL);
-}
 
 // IMPORTANT / MAGIC NUMBERS HAVE TO BE DEFINED //
 
 /**
  * @brief				Initalizes all modules.
  */
-uint8_t *canny_edge(uint8_t *img_buffer, enum colour *color){
+uint8_t *canny_edge(enum colour *color){
 
 
 	//image conversion from RGB to grayscale + saves the color for each pixel in a separate array//
-	img_buffer = dcmi_get_last_image_ptr();
 	uint8_t img_temp_buffer[(IM_LENGTH_PX*IM_HEIGHT_PX)] = {0};
 	uint16_t red_px, blue_px, green_px = 0;
 	uint16_t low_threshold[3] = {0};

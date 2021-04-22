@@ -3,6 +3,7 @@
 
 enum colour{white, black, red, blue, green};
 
+void capture_image(void);
 void im_acquisition(void);
 uint8_t *canny_edge(void);
 
