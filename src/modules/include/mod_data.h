@@ -31,6 +31,9 @@ cartesian_coord* data_get_pos(void);
  * @param[in]			Number of coordinates
  * @return				none
  */
+
+uint8_t* data_get_color(void);
+
 void data_set_length(uint16_t length);
 
 /**

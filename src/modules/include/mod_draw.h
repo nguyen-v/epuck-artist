@@ -22,8 +22,14 @@
 
 void draw_set_init_length(float y_length);
 void draw_reset(void);
+void draw_create_thd(void);
+void draw_stop_thd(void);
+void draw_pause_thd(void);
+void draw_resume_thd(void);
 
+uint16_t draw_get_length_av_current(void);
 
+uint16_t draw_get_length_av_next(uint16_t x, uint16_t y);
 /**
  * @brief			Moves the e-puck to specified XY coordinates.
  * @note			(0,0) is at the top-left of the canvas.
