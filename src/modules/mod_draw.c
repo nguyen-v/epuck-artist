@@ -102,20 +102,22 @@ static THD_FUNCTION(thd_draw, arg)
 	uint16_t i = 0;
 	uint16_t length = data_get_length();
 	cartesian_coord* pos = data_get_pos();
+	uint8_t* color = data_get_color();
+//	uint8_t current_color = color[0];
+//	uint8_t prev_color = 0;
+
 	chprintf((BaseSequentialStream *)&SDU1, "thread created \r \n");
 	chprintf((BaseSequentialStream *)&SDU1, "length= %d \r \n", length);
 	for(i = 0; i<length && !chThdShouldTerminateX(); ++i) {
 
 		chSysLock();
 		if (is_paused) {
-//			chprintf((BaseSequentialStream *)&SDU1, "thread paused \r \n");
 		  chSchGoSleepS(CH_STATE_SUSPENDED);
 		}
 		chSysUnlock();
-//		palClearPad(GPIOD, GPIOD_LED1);
-//		chThdSleepMilliseconds(1000);
-//		palSetPad(GPIOD, GPIOD_LED1);
-//		chThdSleepMilliseconds(1000);
+
+		chprintf((BaseSequentialStream *)&SD3, "COL \r \n");
+
 		draw_move(pos[i].x, pos[i].y);
 		chprintf((BaseSequentialStream *)&SDU1, "loop n %d \r \n", i);
 //		chBSemWait(&move_finished_sem);
