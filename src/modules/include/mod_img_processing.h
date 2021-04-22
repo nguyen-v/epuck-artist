@@ -1,10 +1,14 @@
-#ifndef SRC_MODULES_INCLUDE_MOD_IMAGE_PROCESSING_H_
-#define SRC_MODULES_INCLUDE_MOD_IMAGE_PROCESSING_H_
+#ifndef SRC_MODULES_INCLUDE_MOD_IMG_PROCESSING_H_
+#define SRC_MODULES_INCLUDE_MOD_IMG_PROCESSING_H_
 
 enum colour{white, black, red, blue, green};
 
 void capture_image(void);
 void im_acquisition(void);
-uint8_t *canny_edge(void);
+void send_image(void);
+void send_image_half(void);
+//uint8_t *canny_edge(enum colour *color);
+void canny_edge(void);
 
-#endif /* SRC_MODULES_INCLUDE_MOD_IMAGE_PROCESSING_H_ */
+
+#endif /* SRC_MODULES_INCLUDE_MOD_IMG_PROCESSING_H_ */
