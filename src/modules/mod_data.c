@@ -39,6 +39,10 @@ cartesian_coord* data_get_pos(void)
 	return pos;
 }
 
+uint8_t* data_get_color(void)
+{
+	return color;
+}
 
 void data_set_length(uint16_t length)
 {
