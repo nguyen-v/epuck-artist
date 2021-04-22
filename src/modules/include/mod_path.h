@@ -9,7 +9,7 @@
 #define _MOD_PATH_H_
 
 #include <camera/po8030.h>
-#include <image_processing.h>
+#include <mod_image_processing.h>
 #include <include/tools.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,22 +33,18 @@ struct edge_track{
 	struct px_pos pos;
 	uint8_t label;
 	enum px_status start_end;	//line = 0, edge = 1;
-
-};
-
-struct path_motor{
-
-	struct px_pos pos;
 	enum colour color;
 
 };
 
-struct path_motor *path_planning(uint8_t *img_buffer, struct path_motor *final_path);
+
+void path_planning(uint8_t *img_buffer, struct cartesian_coord *final_path, enum colour *color);
 void edge_scanning(uint8_t *img_buffer, uint8_t *count_lab);
 void path_labelling(uint8_t *img_buffer);
 void edge_tracing(struct edge_track *contours, struct edge_pos *edges);
 uint16_t path_optimization(struct edge_track *contours, uint16_t size, struct edge_track* dest, uint16_t destlen);
 void nearest_neighbour(struct edge_pos *edges, uint16_t *edge_index, enum edge_status *status);
+void img_resize(struct path_motor* path, uint16_t path_size);
 
 void save_pos(struct edge_track *pos, uint8_t x, uint8_t y, uint8_t label, enum px_status start_end, uint8_t k);
 void save_edge_pos(struct edge_pos *pos, uint8_t x, uint8_t y, uint8_t curve_index, uint8_t this_index);
