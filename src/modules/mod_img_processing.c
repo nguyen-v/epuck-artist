@@ -27,8 +27,7 @@
 
 // List of constants used during calculations
 
-#define IM_LENGTH_PX 100
-#define IM_HEIGHT_PX 90
+
 #define XY_OFFSET_5x5 2
 #define XY_OFFSET_3x3 1
 #define RAD2DEG 180./M_PI
@@ -66,8 +65,6 @@ static enum colour color[IM_LENGTH_PX*IM_HEIGHT_PX];
 
 static float theta[(IM_LENGTH_PX*IM_HEIGHT_PX)]={0};
 static float I_mag[(IM_LENGTH_PX*IM_HEIGHT_PX)]={0};
-
-static float max = 0;
 
 /*===========================================================================*/
 /* Module local functions.                                                   */
@@ -229,7 +226,8 @@ void canny_edge(void){
 
 //	float theta[(IM_LENGTH_PX*IM_HEIGHT_PX)]={0};
 //	float I_mag[(IM_LENGTH_PX*IM_HEIGHT_PX)]={0};
-	max = 0;
+	float max = 0;
+
 	for(uint8_t x = XY_OFFSET_3x3; x < IM_LENGTH_PX-XY_OFFSET_3x3; ++x){
 		for(uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y){
 			position = x + (y * IM_LENGTH_PX);
