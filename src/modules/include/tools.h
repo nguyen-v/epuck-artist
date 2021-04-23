@@ -8,18 +8,9 @@
 #ifndef _TOOLS_H_
 #define _TOOLS_H_
 
-struct px_pos{
+#include <mod_data.h>
 
-	uint8_t pos_x;
-	uint8_t pos_y;
+float perpendicular_distance(struct cartesian_coord start, struct cartesian_coord end, struct cartesian_coord point);
+float two_point_distance(struct cartesian_coord point1, struct cartesian_coord point2);
 
-};
-
-uint8_t flatten(uint8_t old_img);
-void push_back(uint8_t temp_img_val, uint8_t new_img);
-uint8_t merge(uint8_t count_lab, uint8_t x, uint8_t y);
-uint16_t position(uint8_t pox_x, uint8_t pos_y);
-float perpendicular_distance(struct px_pos start, struct px_pos end, struct px_pos point);
-float two_point_distance(struct px_pos point1, struct px_pos point2);
-
-#endif /* SRC_MODULES_INCLUDE_TOOLS_H_ */
+#endif /* _TOOLS_H_ */
