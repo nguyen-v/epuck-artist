@@ -12,7 +12,8 @@ GLOBAL_PATH = lib/e-puck2_main-processor
 CSRC += ./main.c \
 		./modules/mod_communication.c \
 		./modules/mod_data.c \
-		./modules/mod_path.c \
+		./modules/mod_img_processing.c \
+#		./modules/mod_path.c \
 		./modules/tools.c \
 		
 
