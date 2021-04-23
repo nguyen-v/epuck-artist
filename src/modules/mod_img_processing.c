@@ -106,13 +106,6 @@ void capture_image(void){
 //	po8030_set_brightness(64);
 	po8030_set_contrast(128);
 //	po8030_set_awb(1);
-//	/*! Sets white balance red, green, blue gain.
-//	 *  These values are considered only when auto white balance is disabled, so this function also disables auto white balance.
-//	 * \param r: red gain: bit7=x2, bit6=x1, bit5=1/2, bit4=1/4, bit3=1/8, bit2=1/16, bit1=1/32, bit0=1/64. Default is 0x5E.
-//	 * \param g: green gain: bit7=x2, bit6=x1, bit5=1/2, bit4=1/4, bit3=1/8, bit2=1/16, bit1=1/32, bit0=1/64. Default is 0x40.
-//	 * \param b: blue gain: bit7=x2, bit6=x1, bit5=1/2, bit4=1/4, bit3=1/8, bit2=1/16, bit1=1/32, bit0=1/64. Default is 0x5D.
-//	 */
-//	po8030_set_rgb_gain(uint8_t r, uint8_t g, uint8_t b) {
 	dcmi_disable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
@@ -195,25 +188,24 @@ void canny_edge(void){
 	for(uint8_t i=0; i < 3; ++i)
 		low_threshold[i] = (uint16_t)(COEFF*average[i]);
 
+
 	for(uint16_t i = 0; i < (IM_LENGTH_PX * IM_HEIGHT_PX)*2; i+=2){
 
 		red_px = (uint8_t)img_buffer[i] & 0xF7;
 		green_px = (uint8_t)((img_buffer[i] & 0x07) || (img_buffer[i+1] & 0xe0));
 		blue_px = (uint8_t)img_buffer[i+1] & 0x1F;
 
-		if(red_px < low_threshold[0] && blue_px < low_threshold[1] && (uint8_t)green_px/2 < low_threshold[2]) {
+		if(red_px < low_threshold[0] && blue_px < low_threshold[1] && (uint8_t)green_px/2 < low_threshold[2])
 			color[i/2] = black;
-		} else if(red_px > blue_px && red_px > (uint8_t)green_px/2) {
+		else if(red_px > blue_px && red_px > (uint8_t)green_px/2)
 			color[i/2]= red;
-		} else if(blue_px > (uint8_t)green_px/2 && blue_px > red_px) {
+		else if(blue_px > (uint8_t)green_px/2 && blue_px > red_px)
 			color[i/2] =blue;
-		} else if((uint8_t) green_px/2 > red_px && (uint8_t) green_px/2 > blue_px) {
-			color[i/2] = green;
-		}
+		else if((uint8_t) green_px/2 > red_px && (uint8_t) green_px/2 > red_px)
+				color[i/2] = green;
 
 
 		img_buffer[i/2] = (0.2989 * (float)red_px) + (0.5870 * (float)green_px / 2.0) + (0.1140 * (float)blue_px);
-
 	}
 
 	// 5x5 Gaussian Filter. A gaussian function is convoluted to the signal
@@ -276,52 +268,29 @@ void canny_edge(void){
 
 	float i= 0;
 	float j= 0;
-//	for(uint8_t x = XY_OFFSET_3x3; x < IM_LENGTH_PX-XY_OFFSET_3x3; ++x){
-//		for(uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y){
-//			position = x + (y * IM_LENGTH_PX);
-//			if((theta[position] <= 22.5*DEG2RAD && theta[position] >= -22.5*DEG2RAD) || (theta[position] <= -157.5*DEG2RAD && theta[position] >= 157.5*DEG2RAD)){
-//				i = I_mag[position+1];
-//				j = I_mag[position-1];
-//			} else if((theta[position] > 22.5*DEG2RAD && theta[position] <= 67.5*DEG2RAD) || (theta[position] <= -112.5*DEG2RAD && theta[position] > -157.5*DEG2RAD)){
-//				i = I_mag[position + IM_LENGTH_PX +1];
-//				j = I_mag[position + IM_LENGTH_PX -1];
-//			} else if((theta[position] > 67.5*DEG2RAD && theta[position] <= 112.5*DEG2RAD) || (theta[position] <= -67.5*DEG2RAD && theta[position] > -112.5*DEG2RAD)){
-//				i = I_mag[position + IM_LENGTH_PX ];
-//				j = I_mag[position - IM_LENGTH_PX ];
-//			} else if((theta[position] > 112.5*DEG2RAD && theta[position] < 157.5*DEG2RAD) || (theta[position] < -22.5*DEG2RAD && theta[position] >= -67.5*DEG2RAD)){
-//				i = I_mag[position + IM_LENGTH_PX -1 ];
-//				j = I_mag[position - IM_LENGTH_PX + 1];
-//			}
-//			// multiplied by constant >1 for thicker lines
-//			if(i >= 1.1*I_mag[position] || j >= 1.1*I_mag[position])
-//				img_buffer[position] = 0;
-//			else
-//				img_buffer[position] = (uint8_t)I_mag[position];
-//		}
-//	}
 	for(uint8_t x = XY_OFFSET_3x3; x < IM_LENGTH_PX-XY_OFFSET_3x3; ++x){
-			for(uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y){
-				position = x + (y * IM_LENGTH_PX);
-				if((theta[position] <= 22.5*DEG2RAD && theta[position] >= -22.5*DEG2RAD) || (theta[position] <= -157.5*DEG2RAD && theta[position] >= 157.5*DEG2RAD)){
-					i = I_mag[position - 1];
-					j = I_mag[position + 1];
-				} else if((theta[position] > 22.5*DEG2RAD && theta[position] <= 67.5*DEG2RAD) || (theta[position] < -112.5*DEG2RAD && theta[position] >= -157.5*DEG2RAD)){
-					i = I_mag[position - IM_LENGTH_PX + 1];
-					j = I_mag[position + IM_LENGTH_PX - 1];
-				} else if((theta[position] > 67.5*DEG2RAD && theta[position] <= 112.5*DEG2RAD) || (theta[position] < -67.5*DEG2RAD && theta[position] >= -112.5*DEG2RAD)){
-					i = I_mag[position - IM_LENGTH_PX ];
-					j = I_mag[position + IM_LENGTH_PX ];
-				} else if((theta[position] > 112.5*DEG2RAD && theta[position] < 157.5*DEG2RAD) || (theta[position] < -22.5*DEG2RAD && theta[position] >= -67.5*DEG2RAD)){
-					i = I_mag[position - IM_LENGTH_PX - 1 ];
-					j = I_mag[position + IM_LENGTH_PX + 1];
-				}
-				// multiplied by constant >1 for thicker lines
-				if(i >= 1.2*I_mag[position] || j > 1.2*I_mag[position])
-					img_buffer[position] = 0;
-				else
-					img_buffer[position] = (uint8_t)I_mag[position];
+		for(uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y){
+			position = x + (y * IM_LENGTH_PX);
+			if((theta[position] <= 22.5*DEG2RAD && theta[position] >= -22.5*DEG2RAD) || (theta[position] <= -157.5*DEG2RAD && theta[position] >= 157.5*DEG2RAD)){
+				i = I_mag[position - 1];
+				j = I_mag[position + 1];
+			} else if((theta[position] > 22.5*DEG2RAD && theta[position] <= 67.5*DEG2RAD) || (theta[position] < -112.5*DEG2RAD && theta[position] >= -157.5*DEG2RAD)){
+				i = I_mag[position - IM_LENGTH_PX + 1];
+				j = I_mag[position + IM_LENGTH_PX - 1];
+			} else if((theta[position] > 67.5*DEG2RAD && theta[position] <= 112.5*DEG2RAD) || (theta[position] < -67.5*DEG2RAD && theta[position] >= -112.5*DEG2RAD)){
+				i = I_mag[position - IM_LENGTH_PX ];
+				j = I_mag[position + IM_LENGTH_PX ];
+			} else if((theta[position] > 112.5*DEG2RAD && theta[position] < 157.5*DEG2RAD) || (theta[position] < -22.5*DEG2RAD && theta[position] >= -67.5*DEG2RAD)){
+				i = I_mag[position - IM_LENGTH_PX - 1 ];
+				j = I_mag[position + IM_LENGTH_PX + 1];
 			}
+			// multiplied by constant >1 for thicker lines
+			if(i >= 1.2*I_mag[position] || j > 1.2*I_mag[position])
+				img_buffer[position] = 0;
+			else
+				img_buffer[position] = (uint8_t)I_mag[position];
 		}
+	}
 
 
 	// Double threshold - This is used to identify pixel intensities and impose 2 pixel intensities
@@ -340,7 +309,7 @@ void canny_edge(void){
 	}
 
 
-//	 Edge tracking by hysteresis : weak pixels are transformed into strong pixels if and only if one is present around it
+	// Edge tracking by hysteresis : weak pixels are transformed into strong pixels if and only if one is present around it
 
 	for (uint8_t x = 0; x < IM_LENGTH_PX; x++) {
 		for (uint8_t y = 0; y < IM_HEIGHT_PX; y++) {
