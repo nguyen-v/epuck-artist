@@ -267,20 +267,20 @@ void canny_edge(void){
 		for(uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y){
 			position = x + (y * IM_LENGTH_PX);
 			if((theta[position] <= 22.5*DEG2RAD && theta[position] >= -22.5*DEG2RAD) || (theta[position] <= -157.5*DEG2RAD && theta[position] >= 157.5*DEG2RAD)){
-				i = I_mag[position+1];
-				j = I_mag[position-1];
-			} else if((theta[position] > 22.5*DEG2RAD && theta[position] <= 67.5*DEG2RAD) || (theta[position] <= -112.5*DEG2RAD && theta[position] > -157.5*DEG2RAD)){
-				i = I_mag[position + IM_LENGTH_PX +1];
-				j = I_mag[position + IM_LENGTH_PX -1];
-			} else if((theta[position] > 67.5*DEG2RAD && theta[position] <= 112.5*DEG2RAD) || (theta[position] <= -67.5*DEG2RAD && theta[position] > -112.5*DEG2RAD)){
-				i = I_mag[position + IM_LENGTH_PX ];
-				j = I_mag[position - IM_LENGTH_PX ];
+				i = I_mag[position - 1];
+				j = I_mag[position + 1];
+			} else if((theta[position] > 22.5*DEG2RAD && theta[position] <= 67.5*DEG2RAD) || (theta[position] < -112.5*DEG2RAD && theta[position] >= -157.5*DEG2RAD)){
+				i = I_mag[position - IM_LENGTH_PX + 1];
+				j = I_mag[position + IM_LENGTH_PX - 1];
+			} else if((theta[position] > 67.5*DEG2RAD && theta[position] <= 112.5*DEG2RAD) || (theta[position] < -67.5*DEG2RAD && theta[position] >= -112.5*DEG2RAD)){
+				i = I_mag[position - IM_LENGTH_PX ];
+				j = I_mag[position + IM_LENGTH_PX ];
 			} else if((theta[position] > 112.5*DEG2RAD && theta[position] < 157.5*DEG2RAD) || (theta[position] < -22.5*DEG2RAD && theta[position] >= -67.5*DEG2RAD)){
-				i = I_mag[position + IM_LENGTH_PX -1 ];
-				j = I_mag[position - IM_LENGTH_PX + 1];
+				i = I_mag[position - IM_LENGTH_PX - 1 ];
+				j = I_mag[position + IM_LENGTH_PX + 1];
 			}
 			// multiplied by constant >1 for thicker lines
-			if(i >= 1.2*I_mag[position] || j >= 1.2*I_mag[position])
+			if(i >= 1.2*I_mag[position] || j > 1.2*I_mag[position])
 				img_buffer[position] = 0;
 			else
 				img_buffer[position] = (uint8_t)I_mag[position];
