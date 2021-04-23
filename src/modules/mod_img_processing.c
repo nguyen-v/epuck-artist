@@ -39,8 +39,8 @@
 // After testing, I noticed that low resolution images have a LOT of noise remaining in the final image.
 // The threshold values should be adjusted in order to reduce it to the maximum of our abilities
 
-#define HIGH_THRESHOLD 0.3
-#define LOW_THRESHOLD 0.2
+#define HIGH_THRESHOLD 0.28
+#define LOW_THRESHOLD 0.12
 
 // The weights of the gaussian function were directly taken from the internet,
 // Would it be wise to test it for different values of the standard deviation ?
@@ -101,9 +101,11 @@ void capture_image(void){
 	 * @retval MSG_TIMEOUT  if a timeout occurred before operation end
 	 *
 	 */
-//	int8_t po8030_set_contrast(uint8_t value);
+
 	po8030_advanced_config(FORMAT_RGB565, 200, 0, 4*IM_LENGTH_PX, 4*IM_HEIGHT_PX, SUBSAMPLING_X4, SUBSAMPLING_X4);
 	po8030_set_brightness(64);
+//	po8030_set_contrast(20);
+	po8030_set_awb(1);
 	dcmi_disable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
@@ -131,20 +133,20 @@ void send_image(void) {
 }
 
 void send_image_half(void) {
-//	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
-//	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer, 4000);
-//	chThdSleepMilliseconds(400);
-//	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+4000, 4000);
-//	chThdSleepMilliseconds(400);
-//	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+8000, 1000);
-//	chThdSleepMilliseconds(400);
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_temp_buffer, 4000);
+	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer, 4000);
 	chThdSleepMilliseconds(400);
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_temp_buffer+4000, 4000);
+	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+4000, 4000);
 	chThdSleepMilliseconds(400);
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_temp_buffer+8000, 1000);
+	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+8000, 1000);
 	chThdSleepMilliseconds(400);
+//	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
+//	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_temp_buffer, 4000);
+//	chThdSleepMilliseconds(400);
+//	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_temp_buffer+4000, 4000);
+//	chThdSleepMilliseconds(400);
+//	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_temp_buffer+8000, 1000);
+//	chThdSleepMilliseconds(400);
 
 //	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
 //	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer, 4000);
@@ -277,7 +279,8 @@ void canny_edge(void){
 				i = I_mag[position + IM_LENGTH_PX -1 ];
 				j = I_mag[position - IM_LENGTH_PX + 1];
 			}
-			if(i >= I_mag[position] || j >= I_mag[position])
+			// multiplied by constant >1 for thicker lines
+			if(i >= 1.2*I_mag[position] || j >= 1.2*I_mag[position])
 				img_buffer[position] = 0;
 			else
 				img_buffer[position] = (uint8_t)I_mag[position];
@@ -303,22 +306,25 @@ void canny_edge(void){
 
 	// Edge tracking by hysteresis : weak pixels are transformed into strong pixels if and only if one is present around it
 
-//	for (uint8_t x = 0; x < IM_LENGTH_PX; x++) {
-//		for (uint8_t y = 0; y < IM_HEIGHT_PX; y++) {
-//			position = x + (y * IM_LENGTH_PX);
-//			if(img_temp_buffer[position] == 100){
-//				if(img_temp_buffer[position-IM_LENGTH_PX-1] == 255|| img_temp_buffer[position-IM_LENGTH_PX] == 255 ||
-//						img_temp_buffer[position-IM_LENGTH_PX+1] == 255 || img_temp_buffer[position-1] == 255 ||
-//						img_temp_buffer[position+1] == 255 || img_temp_buffer[position+IM_LENGTH_PX-1] == 255 ||
-//						img_temp_buffer[position-IM_LENGTH_PX] == 255 || img_temp_buffer[position+IM_LENGTH_PX+1] == 255)
-//					img_buffer[position] = 1;
-//				else if(img_temp_buffer[position] == 255)
-//				img_buffer[position] = 1;
-//			else img_buffer[position] = 0;
-//			}
-//		}
-//	//returns a pointer to a binary array
-//	}
+	for (uint8_t x = 0; x < IM_LENGTH_PX; x++) {
+		for (uint8_t y = 0; y < IM_HEIGHT_PX; y++) {
+			position = x + (y * IM_LENGTH_PX);
+			if(img_temp_buffer[position] == 100){
+				if(img_temp_buffer[position-IM_LENGTH_PX-1] == 255|| img_temp_buffer[position-IM_LENGTH_PX] == 255 ||
+						img_temp_buffer[position-IM_LENGTH_PX+1] == 255 || img_temp_buffer[position-1] == 255 ||
+						img_temp_buffer[position+1] == 255 || img_temp_buffer[position+IM_LENGTH_PX-1] == 255 ||
+						img_temp_buffer[position+IM_LENGTH_PX] == 255 || img_temp_buffer[position+IM_LENGTH_PX+1] == 255)
+					img_buffer[position] = 255;
+				else
+					img_buffer[position] = 0;
+			} else if(img_temp_buffer[position] == 255) {
+				img_buffer[position] = 255;
+			} else {
+				img_buffer[position] = 0;
+			}
+		}
+	//returns a pointer to a binary array
+	}
 //return img_buffer;
 }
 
