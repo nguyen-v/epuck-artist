@@ -179,6 +179,8 @@ void draw_set_init_length(float y_length)
 
 void draw_reset(void)
 {
+	right_motor_set_speed(0);
+	left_motor_set_speed(0);
 	right_motor_set_pos(0);
 	left_motor_set_pos(0);
 }
@@ -194,9 +196,11 @@ void draw_create_thd(void)
 
 void draw_stop_thd(void)
 {
-	chThdTerminate(ptr_draw);
-	is_drawing = false;
-	is_paused = false;
+	if(is_drawing) {
+		chThdTerminate(ptr_draw);
+		is_drawing = false;
+		is_paused = false;
+	}
 }
 
 void draw_pause_thd(void)
@@ -243,8 +247,8 @@ void draw_move(uint16_t x, uint16_t y)
 	uint16_t len_l_current = len0_st - right_motor_get_pos();
 	uint16_t len_r_current = len0_st - left_motor_get_pos();
 
-//	chprintf((BaseSequentialStream *)&SDU1, "len_l_current = %d \r \n",len_l_current);
-//	chprintf((BaseSequentialStream *)&SDU1, "len_r_current = %d \r \n",len_r_current);
+	chprintf((BaseSequentialStream *)&SDU1, "len_l_current = %d \r \n",len_l_current);
+	chprintf((BaseSequentialStream *)&SDU1, "len_r_current = %d \r \n",len_r_current);
 //	chprintf((BaseSequentialStream *)&SDU1, "spool perim cm = %f \r \n",SPOOL_PERIMETER);
 //	chprintf((BaseSequentialStream *)&SDU1, "CMTOSTEP = %f \r \n",CM_TO_STEP);
 //	chprintf((BaseSequentialStream *)&SDU1, "CARTTOST = %f \r \n",CART_TO_ST);
