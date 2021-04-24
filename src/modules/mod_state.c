@@ -40,7 +40,7 @@
 #define CMD_DRAW			'D'
 #define CMD_INTERACTIVE		'I'
 #define CMD_HOME			'H'
-
+#define CMD_VALIDATE 		'V'
 
 
 // Periods
@@ -74,10 +74,13 @@ static void process_command(uint8_t cmd)
 //			palSetPad(GPIOD, GPIOD_LED1);
 //			chprintf((BaseSequentialStream *)&SDU1, "RESET \r \n");
 //			draw_reset();
-//			data_free();
-//			draw_stop_thd();
+			data_free();
+			draw_stop_thd();
+			cal_stop_thd();
+//			SET MOTOR SPEED AT 0
 //			cal_set_init_length();
-//			draw_reset();
+			draw_reset();
+			draw_set_init_length(100);
 			break;
 		case CMD_PAUSE:
 			draw_pause_thd();
@@ -86,8 +89,9 @@ static void process_command(uint8_t cmd)
 			draw_resume_thd();
 			break;
 		case CMD_CALIBRATE:
-			color = data_get_color();
-			draw_set_init_length(color[0]);
+			cal_create_thd();
+//			color = data_get_color();
+//			draw_set_init_length(color[0]);
 //			height = get_initial_height_cm();
 //			chprintf((BaseSequentialStream *)&SDU1, "init height %f \r \n", height);
 			break;
@@ -107,6 +111,10 @@ static void process_command(uint8_t cmd)
 			break;
 		case CMD_HOME:
 			draw_move(512, 0);
+			break;
+		case CMD_VALIDATE:
+//			cal_set_init_length();
+			cal_set_goal_distance();
 			break;
 		default:
 			chprintf((BaseSequentialStream *)&SDU1, "Invalid command");
