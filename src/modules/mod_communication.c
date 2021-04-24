@@ -91,6 +91,40 @@ uint8_t com_receive_command(BaseSequentialStream* in)
 	return c = chSequentialStreamGet(in); // parses the command
 }
 
+uint8_t com_receive_length(BaseSequentialStream* in)
+{
+	volatile uint8_t c;
+	uint8_t state = 0;
+
+	while(state != 3) {
+		c = chSequentialStreamGet(in);
+
+		switch(state) {
+			case 0:
+				if(c == 'L')
+					state = 1;
+				else
+					state = 0;
+			case 1:
+				if(c == 'E')
+					state = 2;
+				else if(c == 'L')
+					state = 1;
+				else
+					state = 0;
+			case 2:
+				if(c == 'N')
+					state = 3;
+				else if (c == 'L')
+					state = 1;
+				else
+					state = 0;
+		}
+	}
+	chprintf((BaseSequentialStream *)&SDU1, "Length detected \r \n");
+	return c = chSequentialStreamGet(in); // parses length
+}
+
 
 uint16_t com_receive_data(BaseSequentialStream* in)
 {
@@ -181,7 +215,6 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 	data_is_ready = true;
 	return length;
 }
-
 
 
 
