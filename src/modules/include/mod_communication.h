@@ -38,6 +38,15 @@ bool data_ready(void);
 uint8_t com_receive_command(BaseSequentialStream* in);
 
 /**
+ * @brief			Reads length data (uint8) from the computer.
+ * @note			UART3 is connected to COM8 (Bluetooth).
+ *
+ * @param[in] in 	Pointer to a @p BaseSequentialStream or derived class
+ * @return			Length in mm
+ */
+uint8_t com_receive_length(BaseSequentialStream* in);
+
+/**
  * @brief				Reads position and color data from the computer and
  * 						and fills corresponding buffers.
  * @note				UART3 is connected to COM8 (Bluetooth).
