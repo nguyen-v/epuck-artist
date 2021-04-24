@@ -27,7 +27,7 @@ struct edge_pos{
 };
 
 
-enum edge_status{start = 0, end = 1, init = 2};
+//enum edge_status{start = 0, end = 1, init = 2};
 
 struct edge_track{
 
@@ -41,11 +41,11 @@ struct edge_track{
 
 
 cartesian_coord *path_planning(uint8_t *img_buffer, uint8_t *color);
-uint8_t edge_scanning(uint8_t *img_buffer, uint16_t *count_lab);
-void path_labelling(uint8_t *img_buffer);
-void edge_tracing(struct edge_track *contours, struct edge_pos *edges, uint8_t *color);
+uint8_t edge_scanning(uint8_t *img_buffer, uint8_t* label, uint16_t *count_lab);
+void path_labelling(uint8_t *img_buffer, uint8_t *label);
+void edge_tracing(struct edge_track *contours, struct edge_pos *edges, uint8_t *color, uint8_t *label);
 uint16_t path_optimization(struct edge_track *contours, uint16_t size, struct edge_track* dest, uint16_t destlen);
-void nearest_neighbour(struct edge_pos *edges, enum edge_status *status);
+void nearest_neighbour(struct edge_pos *edges, uint8_t *status);
 void img_resize(struct cartesian_coord* path, uint16_t path_size);
 
 void flatten(uint16_t *count_lab, uint16_t count);

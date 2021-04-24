@@ -28,8 +28,6 @@
 const int8_t dx[] = {0, -1, +1, -1};
 const int8_t dy[] = {-IM_LENGTH_PX, 0, -IM_LENGTH_PX, -IM_LENGTH_PX};
 
-static uint8_t label[IM_LENGTH_PX*IM_HEIGHT_PX] = {0};
-
 static uint16_t size_contours = 0;
 static uint16_t size_edges = 0;
 
@@ -44,9 +42,9 @@ static uint16_t size_edges = 0;
 
 cartesian_coord *path_planning(uint8_t *img_buffer, uint8_t *color){
 
-	struct edge_track *contours = (struct edge_track*)malloc(2000*sizeof(struct edge_track));			// Unless we find a way to quantify it, the size of this array will be chosen arbitrarily
-	struct edge_pos *edges = (struct edge_pos*)malloc(2000*sizeof(struct edge_pos));			// The same goes for this array
-													// Though both can be realocated later on...
+	struct edge_track *contours = (struct edge_track*)calloc(2000,sizeof(struct edge_track));			// Unless we find a way to quantify it, the size of this array will be chosen arbitrarily
+	struct edge_pos *edges = (struct edge_pos*)calloc(2000,sizeof(struct edge_pos));			// The same goes for this array
+	uint8_t *label = (uint8_t*)calloc(IM_LENGTH_PX*IM_HEIGHT_PX,sizeof(uint8_t));												// Though both can be realocated later on...
 	edges[0].pos.x = INIT_ROBPOS_PX;
 	edges[0].pos.y = INIT_ROBPOS_PY;
 	edges[0].index = 0;
@@ -54,11 +52,11 @@ cartesian_coord *path_planning(uint8_t *img_buffer, uint8_t *color){
 
 	//----------- This part labels the contours and extracts them into one single array conveniently named "Contours" ---------------//
 
-	path_labelling(img_buffer);
-	edge_tracing(contours, edges, color);
+	path_labelling(img_buffer, label);
+	edge_tracing(contours, edges, color, label);
 	edges = (struct edge_pos*)realloc(edges, size_edges*sizeof(struct edge_pos));
 	contours = (struct edge_track*)realloc(contours, size_contours*sizeof(struct edge_track));  //We realocate the proper memory weight for each array;
-
+	free(label);
 	//-------- This part separates all the contours and optimizes them separately before reuniting them together -----------//
 
 	uint16_t total_size = 0;
@@ -69,10 +67,8 @@ cartesian_coord *path_planning(uint8_t *img_buffer, uint8_t *color){
 		uint16_t length = edges[i*2 + 2].index - edges[i*2 + 1].index + 1;
 
 		struct edge_track res_out[length];
-		memset(res_out, 0, length*sizeof(struct edge_track));
 
 		struct edge_track new_contour[length];
-		memset(new_contour, 0, length*sizeof(struct edge_track));
 
 		for(uint8_t n = 0; n < length; ++n){
 			new_contour[n] = contours[contours_size + n];
@@ -91,7 +87,7 @@ cartesian_coord *path_planning(uint8_t *img_buffer, uint8_t *color){
 
 
 	//-------------------------------- This part decides the final path of the robot -----------------------//
-//
+
 //	// We must first find the position of each and every edge again
 //	uint16_t edge_index[size_edges];
 //	memset(edge_index, 0, size_edges*sizeof(uint16_t));
@@ -107,20 +103,19 @@ cartesian_coord *path_planning(uint8_t *img_buffer, uint8_t *color){
 //		}
 //	}
 
-	//---------------------- This part reorganizes the edges' positions. With this, we know how to read the contours table -----------//
+	//---------------------- This part reorganizes the edges' positions. With this, we know how to read the contour table -----------//
 
 
-	enum edge_status status[size_edges];
-	memset(status, 0, size_edges*sizeof(enum edge_status));
+	uint8_t status[size_edges];
 
-	status[0] = init;
+	status[0] = 2;
 	nearest_neighbour(edges, status);
 	cartesian_coord* final_path = (cartesian_coord*)malloc(total_size*sizeof(cartesian_coord));
 	color = (uint8_t*)realloc(final_path,total_size*sizeof(uint8_t));
 
 
 	for(uint8_t i = 0; i < size_edges; i+=2){
-		if(status[i] == start){
+		if(status[i] == 0){
 			for(uint16_t j = edges[i].index; j <= edges[i+1].index; ++j){
 				final_path[j].x = contours[j].pos.x;
 				final_path[j].y = contours[j].pos.y;
@@ -129,7 +124,7 @@ cartesian_coord *path_planning(uint8_t *img_buffer, uint8_t *color){
 					color[j] = 0;
 			}
 		} else {
-			if(status[i] == end){
+			if(status[i] == 1){
 				for(uint16_t j = edges[i].index; j >= edges[i+1].index; --j){
 					final_path[j].x = contours[j].pos.x;
 					final_path[j].y = contours[j].pos.y;
@@ -152,13 +147,13 @@ cartesian_coord *path_planning(uint8_t *img_buffer, uint8_t *color){
 
 
 
-void path_labelling(uint8_t *img_buffer){
+void path_labelling(uint8_t *img_buffer, uint8_t *label){
 
 	uint16_t count_lab[IM_LENGTH_PX] = {0};
-	uint8_t counter = edge_scanning(img_buffer,count_lab);
+	uint8_t counter = edge_scanning(img_buffer,label,count_lab);
 	flatten(count_lab,counter);
-	for(uint8_t x=0 ;x < IM_LENGTH_PX; x++){
-		for(uint8_t y=0 ; y < IM_HEIGHT_PX; y++){
+	for(uint8_t x = 0 ; x < IM_LENGTH_PX; x++){
+		for(uint8_t y = 0 ; y < IM_HEIGHT_PX; y++){
 			label[position(x,y)]=count_lab[label[position(x,y)]];
 		}
 	}
@@ -171,13 +166,13 @@ void path_labelling(uint8_t *img_buffer){
  * 				This algorithm uses a 8 neighbour checking system and raster scanning to attribute labels to defined edges.
  *
  */
-uint8_t edge_scanning(uint8_t *img_buffer, uint16_t *count_lab){
+uint8_t edge_scanning(uint8_t *img_buffer, uint8_t* label, uint16_t *count_lab){
 
 	uint16_t pos = 0;
 	uint8_t counter = 1;
 
 for(uint8_t y = 1 ; y < IM_HEIGHT_PX;++y){
-	for(uint8_t x = 1 ; x < IM_LENGTH_PX;++x){
+	for(uint8_t x = 1 ; x < IM_LENGTH_PX-1;++x){
 			pos = position(x,y);
 			if(img_buffer[pos]){
 				if(!img_buffer[pos + dx[0] + dy[0] ]){
@@ -223,11 +218,11 @@ for(uint8_t y = 1 ; y < IM_HEIGHT_PX;++y){
  * 		  area around it and follows the countour until it reaches the edge. With this algorithm, we can tell apart edges from simple lines depending on the number
  * 		  of neighbours around them.
  */
-void edge_tracing(struct edge_track *contours, struct edge_pos *edges, uint8_t *color){
+void edge_tracing(struct edge_track *contours, struct edge_pos *edges, uint8_t *color, uint8_t *label){
 
-	uint8_t diag_px_priority = 0, temp_x = 0, temp_y = 0, next_x = 0, next_y = 0, last_x = 0, last_y = 0, j = 0, k = 0;
+	uint8_t diag_px_priority = 0, temp_x = 0, temp_y = 0, next_x = 0, next_y = 0, last_x = 0, last_y = 0, j = 0;
 	uint8_t start_end = 0, tracing_progress = 0, next_px = 0;
-	uint8_t l = 1;
+	uint16_t l = 1, k = 0;
 	uint8_t first_value = 0;
 	uint16_t pos = 0;
 	uint8_t status = 0;
@@ -402,7 +397,7 @@ uint16_t path_optimization(struct edge_track *contours, uint16_t size, struct ed
  * 			and recalculates the distance from the newly found point to all the other unvisited points.
  *
  */
-void nearest_neighbour(struct edge_pos *edges, enum edge_status *status){
+void nearest_neighbour(struct edge_pos *edges, uint8_t *status){
 
 	uint16_t visited[size_edges]; //remplacer par size_edges
 	memset(visited, 0, size_edges*sizeof(struct edge_track));
@@ -441,8 +436,8 @@ void nearest_neighbour(struct edge_pos *edges, enum edge_status *status){
 		px_temp = edges[j];
 		edges[j] = edges[index];
 		edges[index] = px_temp;
-		status[j] = end;
-		status[j+1] = start;
+		status[j] = 1;
+		status[j+1] = 0;
 		visited[j] = 1;
 		visited[j+1] = 1;
 		break;
@@ -454,13 +449,13 @@ void nearest_neighbour(struct edge_pos *edges, enum edge_status *status){
 		px_temp = edges[j];
 		edges[j] = edges[index];
 		edges[index] = px_temp;
-		status[j] = end;
+		status[j] = 1;
 		visited[j] = 1;
 		//swap(edges[j],edges[index-1]);
 		px_temp = edges[j+1];
 		edges[j+1] = edges[index-1];
 		edges[index-1] = px_temp;
-		status[j+1] = start;
+		status[j+1] = 0;
 		visited[j+1] = 1;
 		k = j+1;
 		++counter;
@@ -471,13 +466,13 @@ void nearest_neighbour(struct edge_pos *edges, enum edge_status *status){
 		px_temp = edges[j];
 		edges[j] = edges[index];
 		edges[index] = px_temp;
-		status[j] = start;
+		status[j] = 0;
 		visited[j] = 1;
 		//swap(edges[j+1],edges[index+1]);
 		px_temp = edges[j+1];
 		edges[j+1] = edges[index+1];
 		edges[index+1] = px_temp;
-		status[j+1] = end;
+		status[j+1] = 1;
 		visited[j + 1] = 1;
 		k = j + 1;
 		++counter;
