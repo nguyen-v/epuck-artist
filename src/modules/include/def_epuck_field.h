@@ -8,9 +8,14 @@
 
 #define X_RESOLUTION			1024
 #define PI						3.14159265358979f
+
+// standby coordinates
+#define X_DEFAULT 				(X_RESOLUTION/2)
+#define Y_DEFAULT  				0
+
 // e-puck
-#define SPOOL_DISTANCE     		11.0f    // cm
-#define SPOOL_DIAMETER     		1.1f 	 // cm
+#define SPOOL_DISTANCE     		8.0f    // cm
+#define SPOOL_DIAMETER     		1.2f 	 // cm
 #define SPOOL_PERIMETER			(PI*SPOOL_DIAMETER) // cm
 #define NSTEP_ONE_TURN			1000.0f
 
@@ -19,6 +24,7 @@
 #define MARGIN					(SPOOL_DISTANCE*2) // cm
 
 #define CM_TO_STEP				(NSTEP_ONE_TURN/SPOOL_PERIMETER)
+#define MM_TO_STEP 				(CM_TO_STEP/10.)
 
 // in steps
 #define SPOOL_DISTANCE_ST  		((uint16_t)(SPOOL_DISTANCE*CM_TO_STEP))
