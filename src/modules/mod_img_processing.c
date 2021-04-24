@@ -39,7 +39,7 @@
 // The threshold values should be adjusted in order to reduce it to the maximum of our abilities
 
 #define HIGH_THRESHOLD 0.28
-#define LOW_THRESHOLD 0.12
+#define LOW_THRESHOLD 0.18
 
 // The weights of the gaussian function were directly taken from the internet,
 // Would it be wise to test it for different values of the standard deviation ?
@@ -100,9 +100,9 @@ void capture_image(void){
 	 */
 
 	po8030_advanced_config(FORMAT_RGB565, 200, 0, 4*IM_LENGTH_PX, 4*IM_HEIGHT_PX, SUBSAMPLING_X4, SUBSAMPLING_X4);
-	po8030_set_brightness(64);
-//	po8030_set_contrast(20);
-	po8030_set_awb(1);
+//	po8030_set_brightness(64);
+	po8030_set_contrast(128);
+//	po8030_set_awb(1);
 	dcmi_disable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
@@ -178,8 +178,13 @@ void canny_edge(void){
 		average[2] += (uint8_t)green_px/2;
 		}
 
+		average[0] /= IM_LENGTH_PX*IM_HEIGHT_PX;
+		average[1] /= IM_LENGTH_PX*IM_HEIGHT_PX;
+		average[2] /= IM_LENGTH_PX*IM_HEIGHT_PX;
+
 	for(uint8_t i=0; i < 3; ++i)
-	low_threshold[i] = (uint16_t)COEFF*average[i];
+		low_threshold[i] = (uint16_t)(COEFF*average[i]);
+
 
 	for(uint16_t i = 0; i < (IM_LENGTH_PX * IM_HEIGHT_PX)*2; i+=2){
 

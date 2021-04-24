@@ -18,10 +18,22 @@
 #include "chprintf.h"
 #include <usbcfg.h>
 
+
+#include <camera/po8030.h>
+
+#include "camera/dcmi_camera.h"
+
+
+
+
+
+
+
 // Module headers
 
 #include <main.h>
 #include <mod_communication.h>
+#include "modules/include/mod_img_processing.h"
 
 /*===========================================================================*/
 /* Module constants.                                                         */
@@ -54,6 +66,8 @@ static void init_all(void)
 	chSysInit();
 	mpu_init();
 	usb_start();
+	dcmi_start();
+	po8030_start();
 	com_serial_start();
 }
 
@@ -64,6 +78,7 @@ static void init_all(void)
  */
 static void process_command(uint8_t cmd)
 {
+	uint8_t* img_buffer;
 	switch(cmd) {
 		case CMD_RESET:
 			palClearPad(GPIOD, GPIOD_LED1);
@@ -75,11 +90,28 @@ static void process_command(uint8_t cmd)
 		case CMD_CONTINUE:
 			break;
 		case CMD_CALIBRATE:
+//			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
+//			img_buffer = dcmi_get_last_image_ptr();
+//			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer, 4000);
+//			chThdSleepMilliseconds(400);
+//			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+4000, 4000);
+//			chThdSleepMilliseconds(400);
+//			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+8000, 4000);
+//			chThdSleepMilliseconds(400);
+//			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+12000, 4000);
+//			chThdSleepMilliseconds(400);
+//			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+16000, 2000);
+//			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+70*100, 70*100);
+			send_image_half();
+//			send_image()
 			break;
 		case CMD_GET_DATA:
-			com_receive_data((BaseSequentialStream *)&SD3);
+//			com_receive_data((BaseSequentialStream *)&SD3);
 			break;
 		case CMD_DRAW:
+			capture_image();
+
+			chprintf((BaseSequentialStream *)&SDU1, "Image captured \r \n");
 			break;
 		case CMD_INTERACTIVE:
 			break;
