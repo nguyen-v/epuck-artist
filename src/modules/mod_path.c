@@ -35,24 +35,29 @@ static uint16_t size_edges = 0;
 
 /**
  * @brief			This functions utilizes all the other functions defined above in order to implement the complete path finding program
+ *
+ *
+ * 					IMPORTANT : C'est cette fonction là qui sera appelée dans le main.c. Les tests devraient pouvoir nous dire quelle fonction
+ * 					invoquée à l'intérieur de path planning est susceptible de causer un Kernel Panic. Les deux premières allocations de mémoire que
+ * 					tu peuvent également être génératrice de kernel Panic
  */
 
-void path_planning(uint8_t *img_buffer, enum colour *color){
+cartesian_coord *path_planning(uint8_t *img_buffer, enum colour *color){
 
 	struct edge_track *contours = (struct edge_track*)malloc(5000*sizeof(struct edge_track));			// Unless we find a way to quantify it, the size of this array will be chosen arbitrarily
-	struct cartesian_coord *edges = (struct cartesian_coord*)malloc(5000*sizeof(struct cartesian_coord));			// The same goes for this array
+	struct edge_pos *edges = (struct edge_pos*)malloc(5000*sizeof(struct edge_pos));			// The same goes for this array
 													// Though both can be realocated later on...
-	edges[0].x = INIT_ROBPOS_PX;
-	edges[0].y = INIT_ROBPOS_PY;
+	edges[0].pos.x = INIT_ROBPOS_PX;
+	edges[0].pos.y = INIT_ROBPOS_PY;
+	edges[0].index = 0;
 	++size_edges;
 
 	//----------- This part labels the contours and extracts them into one single array conveniently named "Contours" ---------------//
 
 	path_labelling(img_buffer);
 	edge_tracing(contours, edges, color);
-	edges = (struct cartesian_coord*)realloc(edges, size_edges*sizeof(struct cartesian_coord));
+	edges = (struct edge_pos*)realloc(edges, size_edges*sizeof(struct edge_pos));
 	contours = (struct edge_track*)realloc(contours, size_contours*sizeof(struct edge_track));  //We realocate the proper memory weight for each array;
-
 
 	//-------- This part separates all the contours and optimizes them separately before reuniting them together -----------//
 
@@ -61,7 +66,7 @@ void path_planning(uint8_t *img_buffer, enum colour *color){
 
 	for(uint8_t i = 0; i < size_edges/2; ++i){
 		uint16_t k = 0;
-		uint16_t length = edges[i*2 + 1].index - edges[i*2].index + 1;
+		uint16_t length = edges[i*2 + 2].index - edges[i*2 + 1].index + 1;
 
 		struct edge_track res_out[length];
 		memset(res_out, 0, length*sizeof(struct edge_track));
@@ -86,58 +91,77 @@ void path_planning(uint8_t *img_buffer, enum colour *color){
 
 
 	//-------------------------------- This part decides the final path of the robot -----------------------//
-
-	// We must first find the position of each and every edge again
-	uint16_t edge_index[size_edges];
-	memset(edge_index, 0, size_edges*sizeof(uint16_t));
-
-	uint16_t k = 1;
-	edge_index[0] = 0;
-	edge_index[size_edges - 1] = total_size - 1;
-	for(uint8_t i = 1; i < size_edges-1; ++i){
-		if(contours[i].label != contours[i-1].label){
-			edge_index[k] = i-1;
-			edge_index[++k] = i;
-			++k;
-		}
-	}
+//
+//	// We must first find the position of each and every edge again
+//	uint16_t edge_index[size_edges];
+//	memset(edge_index, 0, size_edges*sizeof(uint16_t));
+//
+//	uint16_t k = 1;
+//	edge_index[0] = 0;
+//	edge_index[size_edges - 1] = total_size - 1;
+//	for(uint8_t i = 1; i < size_edges-1; ++i){
+//		if(contours[i].label != contours[i-1].label){
+//			edge_index[k] = i-1;
+//			edge_index[++k] = i;
+//			++k;
+//		}
+//	}
 
 	//---------------------- This part reorganizes the edges' positions. With this, we know how to read the contours table -----------//
 
 
 	enum edge_status status[size_edges];
-	memset(status, 0, size_edges*sizeof(struct edge_track));
+	memset(status, 0, size_edges*sizeof(enum edge_status));
 
 	status[0] = init;
-	nearest_neighbour(edges, edge_index, status);
+	nearest_neighbour(edges, status);
 	cartesian_coord* final_path = (cartesian_coord*)malloc(total_size*sizeof(cartesian_coord));
 	color = (enum colour*)realloc(final_path,total_size*sizeof(enum colour));
 
 
 	for(uint8_t i = 0; i < size_edges; i+=2){
 		if(status[i] == start){
-			for(uint16_t j = edge_index[i]; j <= edge_index[i+1]; ++j){
+			for(uint16_t j = edges[i].index; j <= edges[i+1].index; ++j){
 				final_path[j].x = contours[j].pos.x;
 				final_path[j].y = contours[j].pos.y;
 				color[j] = contours[j].color;
-				if(j == edge_index[i] || j == edge_index[i+1])
+				if(j == edges[i].index || j == edges[i+1].index)
 					color[j] = white;
 			}
 		} else {
 			if(status[i] == end){
-				for(uint16_t j = edge_index[i]; j >= edge_index[i+1]; --j){
+				for(uint16_t j = edges[i].index; j >= edges[i+1].index; --j){
 					final_path[j].x = contours[j].pos.x;
 					final_path[j].y = contours[j].pos.y;
 					color[j] = contours[j].color;
-					if(j == edge_index[i] || j == edge_index[i+1])
+					if(j == edges[i].index || j == edges[i+1].index)
 						color[j] = white;
 				}
 			}
 		}
 	}
 	img_resize(final_path,total_size);
+	size_edges = 0;
 	free(contours);
 	free(edges);
+	return final_path;
+}
+
+
+
+
+
+
+void path_labelling(uint8_t *img_buffer){
+
+	uint16_t count_lab[IM_LENGTH_PX] = {0};
+	uint8_t counter = edge_scanning(img_buffer,count_lab);
+	flatten(count_lab,counter);
+	for(uint8_t x=0 ;x < IM_LENGTH_PX; x++){
+		for(uint8_t y=0 ; y < IM_HEIGHT_PX; y++){
+			label[position(x,y)]=count_lab[label[position(x,y)]];
+		}
+	}
 }
 
 
@@ -152,8 +176,8 @@ uint8_t edge_scanning(uint8_t *img_buffer, uint16_t *count_lab){
 	uint16_t pos = 0;
 	uint8_t counter = 1;
 
-for(uint8_t y=1; y<IM_HEIGHT_PX;++y){
-	for(uint8_t x=1; x<IM_LENGTH_PX-1;++x){
+for(uint8_t y = 1 ; y < IM_HEIGHT_PX;++y){
+	for(uint8_t x = 1 ; x < IM_LENGTH_PX;++x){
 			pos = position(x,y);
 			if(img_buffer[pos]){
 				if(!img_buffer[pos + dx[0] + dy[0] ]){
@@ -194,139 +218,134 @@ for(uint8_t y=1; y<IM_HEIGHT_PX;++y){
 }
 
 
-
-
-void path_labelling(uint8_t *img_buffer){
-
-	uint16_t count_lab[IM_LENGTH_PX] = {0};
-	uint8_t counter = edge_scanning(img_buffer,count_lab);
-	flatten(count_lab,counter);
-	for(uint8_t x=0 ;x < IM_LENGTH_PX; x++){
-		for(uint8_t y=0 ; y < IM_HEIGHT_PX; y++){
-			label[position(x,y)]=count_lab[label[position(x,y)]];
-		}
-	}
-}
-
-
 /**
  * @brief This algorithm defines and isolates all the contours from the background. when a contour point is found, it checks for all the neighbours in a 8 pixel
  * 		  area around it and follows the countour until it reaches the edge. With this algorithm, we can tell apart edges from simple lines depending on the number
  * 		  of neighbours around them.
  */
-void edge_tracing(struct edge_track *contours, struct cartesian_coord *edges, enum colour *color){
+void edge_tracing(struct edge_track *contours, struct edge_pos *edges, enum colour *color){
 
 	uint8_t diag_px_priority = 0, temp_x = 0, temp_y = 0, next_x = 0, next_y = 0, last_x = 0, last_y = 0, j = 0, k = 0;
 	uint8_t start_end = 0, tracing_progress = 0, next_px = 0;
 	uint8_t l = 1;
+	uint8_t first_value = 0;
 	uint16_t pos = 0;
-	enum px_status status = 0;
+	uint8_t status = 0;
+
+//	for(uint8_t x = 1 ; x < IM_LENGTH_PX-1; x++){
+//		for(uint8_t y = 1 ; y < IM_HEIGHT_PX-1; y++){
 	for(uint8_t x = 0 ; x < IM_LENGTH_PX; x++){
 		for(uint8_t y = 0 ; y < IM_HEIGHT_PX; y++){
-			//if(label[position(x,y)]){
 			pos = position(x,y);
 			while(label[pos]){
 				if(!tracing_progress){
 				temp_x = x;
 				temp_y = y;
-				tracing_progress = TRUE;
+				tracing_progress = 1;
 				}
 				if(label[pos - IM_LENGTH_PX] == label[pos]){
-					if(x != last_x && y-1 != last_y && next_px == FALSE){
+					if((x == last_x && y-1 != last_y && next_px == 0 )|| (x == last_x && y-1 != last_y && next_px == 0)
+							|| (x != last_x && y-1 != last_y && next_px == 0) || !first_value){
 						next_x = x;
 						next_y = y-1;
-						next_px = TRUE;
+						next_px = 1;
 					}
 					++start_end;
 				}
 				if(label[pos - 1] == label[pos]){
-					if(x-1 != last_x && y != last_y && next_px == FALSE){
+					if((x-1 != last_x && y == last_y && next_px == 0 ) || (x-1 == last_x && y != last_y && next_px == 0)
+							|| (x-1 != last_x && y != last_y && next_px == 0) || !first_value){
 						next_x = x-1;
 						next_y = y;
-						next_px = TRUE;
+						next_px = 1;
 					}
 					++start_end;
 				}
 				if((label[pos + 1] == label[pos]) && start_end < 3){
-					if(x+1 != last_x && y != last_y && next_px == FALSE){
+					if((x+1 != last_x && y == last_y && next_px == 0) || (x+1 == last_x && y != last_y && next_px == 0)
+							|| (x+1 != last_x && y != last_y && next_px == 0) || !first_value){
 						next_x = x+1;
 						next_y = y;
-						next_px = TRUE;
+						next_px = 1;
 					}
 					++start_end;
 				}
 				if((label[pos + IM_LENGTH_PX] == label[pos]) && start_end < 3){
-					if(x != last_x && y+1 != last_y && next_px == FALSE){
+					if((x == last_x && y+1 != last_y && next_px == 0 )|| (x == last_x && y+1 != last_y && next_px == 0)
+							|| (x != last_x && y+1 != last_y && next_px == 0)|| !first_value){
 						next_x = x;
 						next_y = y+1;
-						next_px = TRUE;
+						next_px = 1;
 					}
 					++start_end;
 				}
 
-				if(start_end)
+				if(!start_end)
 					diag_px_priority = 1;
 
-				if((label[pos + 1 + IM_LENGTH_PX] == label[pos]) && start_end < 3){
-					if(x != last_x && y+1 != last_y && diag_px_priority && next_px == FALSE){
-						next_x = x;
-						next_y = y+1;
-						next_px = TRUE;
+				if((label[pos + 1 - IM_LENGTH_PX] == label[pos]) && start_end < 3){
+					if((x+1 != last_x && y-1 != last_y && diag_px_priority && next_px == 0 )|| (x+1 == last_x && y-1 != last_y && next_px == 0)
+							|| (x+1 != last_x && y-1 != last_y && next_px == 0)|| !first_value){
+						next_x = x+1;
+						next_y = y-1;
+						next_px = 1;
 					}
 					++start_end;
 				}
 				if((label[pos - 1 - IM_LENGTH_PX] == label[pos]) && start_end < 3){
-					if(x != last_x && y+1 != last_y && diag_px_priority && next_px == FALSE){
-						next_x = x;
-						next_y = y+1;
-						next_px = TRUE;
+					if((x-1 != last_x && y-1 != last_y && diag_px_priority && next_px == 0 )|| (x-1 == last_x && y-1 != last_y && next_px == 0)
+							|| (x-1 != last_x && y-1 != last_y && next_px == 0)|| !first_value){
+						next_x = x-1;
+						next_y = y-1;
+						next_px = 1;
 					}
 					++start_end;
 				}
 				if((label[pos - 1 + IM_LENGTH_PX] == label[pos]) && start_end < 3){
-					if(x != last_x && y+1 != last_y && diag_px_priority && next_px == FALSE){
-						next_x = x;
+					if((x-1 != last_x && y+1 != last_y && diag_px_priority && next_px == 0 )|| (x-1 == last_x && y+1 != last_y && next_px == 0)
+							|| (x-1 != last_x && y+1 != last_y && next_px == 0)|| !first_value){
+						next_x = x-1;
 						next_y = y+1;
-						next_px = TRUE;
+						next_px = 1;
 					}
 					++start_end;
 				}
 				if((label[pos + 1 + IM_LENGTH_PX] == label[pos]) && start_end < 3){
-					if(x != last_x && y+1 != last_y && diag_px_priority && next_px == FALSE){
-						next_x = x;
+					if((x+1 != last_x && y+1 != last_y && diag_px_priority && next_px == 0 )|| (x+1 == last_x && y+1 != last_y && next_px == 0)
+							|| (x +1!= last_x && y+1 != last_y && next_px == 0)|| !first_value){
+						next_x = x+1;
 						next_y = y+1;
-						next_px = TRUE;
+						next_px = 1;
 					}
 					++start_end;
 				}
-//				start_end += (label[position(x+1,y-1)] == label[position(x,y)]) && start_end < 3 ? 1 : 0;
-//				start_end += (label[position(x-1,y-1)] == label[position(x,y)]) && start_end < 3 ? 1 : 0;
-//				start_end += (label[position(x-1,y+1)] == label[position(x,y)]) && start_end < 3 ? 1 : 0;
-//				start_end += (label[position(x+1,y+1)] == label[position(x,y)]) && start_end < 3 ? 1 : 0;
 
 				if(start_end){
 					if(start_end == 1){
-						status = edge;
+						status = 1;
 						save_edge_pos(edges, x, y, k, l);
 						++l;
 						++j;
 						++size_edges;
 					} else{
-						if(start_end == 2) status = line;
+						if(start_end == 2) status = 0;
 					}
 					++size_contours;
 				}
 				save_pos(contours, x, y, label[pos],status, color[pos], k);
 				++k;
 
-				label[position(x,y)] = 0; // MAGIC VALUE -> Transforms label into background
+				label[position(last_x,last_y)] = 0;   // MAGIC VALUE -> Transforms label into background
+				last_x = x;
+				last_y = y;
 				x = next_x;
 				y = next_y;
 				pos = position(x,y);
-				next_px = FALSE;
+				next_px = 0;
 				start_end = 0;
-
+				first_value = 1;
 				if(j == 2){
+					label[position(x,y)] = 0;
 					x = temp_x;
 					y = temp_y;
 					j = 0;
@@ -383,7 +402,7 @@ uint16_t path_optimization(struct edge_track *contours, uint16_t size, struct ed
  * 			and recalculates the distance from the newly found point to all the other unvisited points.
  *
  */
-void nearest_neighbour(struct cartesian_coord *edges, uint16_t *edge_index, enum edge_status *status){
+void nearest_neighbour(struct edge_pos *edges, enum edge_status *status){
 
 	uint16_t visited[size_edges]; //remplacer par size_edges
 	memset(visited, 0, size_edges*sizeof(struct edge_track));
@@ -405,7 +424,7 @@ void nearest_neighbour(struct cartesian_coord *edges, uint16_t *edge_index, enum
 	for(uint16_t i = 0; i < size_edges; ++i){
 
 		if(!visited[i]){
-			d = two_point_distance(edges[k], edges[i]);
+			d = two_point_distance(edges[k].pos, edges[i].pos);
 			if(dmin == 0)
 				dmin = d;
 			if(d <= dmin){
@@ -418,13 +437,9 @@ void nearest_neighbour(struct cartesian_coord *edges, uint16_t *edge_index, enum
 	break;
 	}
 	if(index == 2){
-		uint16_t temp = 0;
-		struct cartesian_coord px_temp = {0};
-		temp = edge_index[j];
+		struct edge_pos px_temp = {0};
 		px_temp = edges[j];
-		edge_index[j] = edge_index[index];
 		edges[j] = edges[index];
-		edge_index[index] = temp;
 		edges[index] = px_temp;
 		status[j] = end;
 		status[j+1] = start;
@@ -435,22 +450,15 @@ void nearest_neighbour(struct cartesian_coord *edges, uint16_t *edge_index, enum
 
 	if(index%2==0){
 		//swap(edges[j+1],edges[index]);
-		uint16_t temp = 0;
-		struct cartesian_coord px_temp = {0};
-		temp = edge_index[j];
+		struct edge_pos px_temp = {0};
 		px_temp = edges[j];
-		edge_index[j] = edge_index[index];
 		edges[j] = edges[index];
-		edge_index[index] = temp;
 		edges[index] = px_temp;
 		status[j] = end;
 		visited[j] = 1;
 		//swap(edges[j],edges[index-1]);
-		temp = edge_index[j+1];
 		px_temp = edges[j+1];
-		edge_index[j+1] = edge_index[index-1];
 		edges[j+1] = edges[index-1];
-		edge_index[index-1] = temp;
 		edges[index-1] = px_temp;
 		status[j+1] = start;
 		visited[j+1] = 1;
@@ -459,22 +467,15 @@ void nearest_neighbour(struct cartesian_coord *edges, uint16_t *edge_index, enum
 	}
 	else {
 		//swap(edges[j],edges[index]);
-		uint16_t temp = 0;
-		struct cartesian_coord px_temp = {0};
-		temp = edge_index[j];
+		struct edge_pos px_temp = {0};
 		px_temp = edges[j];
-		edge_index[j] = edge_index[index];
 		edges[j] = edges[index];
-		edge_index[index] = temp;
 		edges[index] = px_temp;
 		status[j] = start;
 		visited[j] = 1;
 		//swap(edges[j+1],edges[index+1]);
-		temp = edge_index[j+1];
 		px_temp = edges[j+1];
-		edge_index[j+1] = edge_index[index+1];
 		edges[j+1] = edges[index+1];
-		edge_index[index+1] = temp;
 		edges[index+1] = px_temp;
 		status[j+1] = end;
 		visited[j + 1] = 1;
@@ -491,6 +492,7 @@ void nearest_neighbour(struct cartesian_coord *edges, uint16_t *edge_index, enum
 
 
 void swap(uint16_t *edges1, uint16_t *edges2){
+
 	uint16_t temp = 0;
 	temp = *edges1;
 	edges1 = edges2;
@@ -507,7 +509,8 @@ void img_resize(struct cartesian_coord* path, uint16_t path_size){
 }
 
 
-void save_pos(struct edge_track *pos, uint8_t x, uint8_t y, uint8_t label, enum px_status start_end, enum colour color, uint8_t k){
+void save_pos(struct edge_track *pos, uint8_t x, uint8_t y, uint8_t label, uint8_t start_end, enum colour color, uint8_t k){
+
 	pos[k].pos.x= x;
 	pos[k].pos.y = y;
 	pos[k].label = label;
@@ -516,9 +519,10 @@ void save_pos(struct edge_track *pos, uint8_t x, uint8_t y, uint8_t label, enum 
 }
 
 
-void save_edge_pos(struct cartesian_coord *pos, uint8_t x, uint8_t y, uint8_t curve_index, uint8_t this_index){
-	pos[this_index].x = x;
-	pos[this_index].y = y;
+void save_edge_pos(struct edge_pos *pos, uint8_t x, uint8_t y, uint8_t curve_index, uint8_t this_index){
+
+	pos[this_index].pos.x = x;
+	pos[this_index].pos.y = y;
 	pos[this_index].index = curve_index;
 }
 
@@ -527,8 +531,8 @@ uint16_t position(uint8_t pos_x, uint8_t pos_y){
 
 	uint16_t position = pos_x + pos_y*IM_LENGTH_PX;
 	return position;
-
 }
+
 
 void flatten(uint16_t *count_lab, uint16_t count){
 

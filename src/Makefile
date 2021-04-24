@@ -13,6 +13,7 @@ CSRC += ./main.c \
 		./modules/mod_communication.c \
 		./modules/mod_data.c \
 		./modules/mod_path.c \
+		./modules/mod_img_processing.c \
 		./modules/tools.c \
 		
 
