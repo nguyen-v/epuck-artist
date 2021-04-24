@@ -44,8 +44,8 @@ static uint16_t size_edges = 0;
 
 cartesian_coord *path_planning(uint8_t *img_buffer, uint8_t *color){
 
-	struct edge_track *contours = (struct edge_track*)malloc(5000*sizeof(struct edge_track));			// Unless we find a way to quantify it, the size of this array will be chosen arbitrarily
-	struct edge_pos *edges = (struct edge_pos*)malloc(5000*sizeof(struct edge_pos));			// The same goes for this array
+	struct edge_track *contours = (struct edge_track*)malloc(2000*sizeof(struct edge_track));			// Unless we find a way to quantify it, the size of this array will be chosen arbitrarily
+	struct edge_pos *edges = (struct edge_pos*)malloc(2000*sizeof(struct edge_pos));			// The same goes for this array
 													// Though both can be realocated later on...
 	edges[0].pos.x = INIT_ROBPOS_PX;
 	edges[0].pos.y = INIT_ROBPOS_PY;
