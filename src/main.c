@@ -34,6 +34,7 @@
 #include <main.h>
 #include <mod_communication.h>
 #include "modules/include/mod_img_processing.h"
+#include "modules/include/mod_path.h"
 
 /*===========================================================================*/
 /* Module constants.                                                         */
@@ -52,6 +53,11 @@
 // Periods
 
 #define PERIOD_CMD		1000
+
+// TO BE DELETED
+
+static uint8_t *img_buffer;
+static cartesian_coord *path;
 
 /*===========================================================================*/
 /* Module local functions.                                                   */
@@ -78,7 +84,9 @@ static void init_all(void)
  */
 static void process_command(uint8_t cmd)
 {
-	uint8_t* img_buffer;
+
+	uint8_t* color = (uint8_t*)malloc(IM_LENGTH_PX*IM_HEIGHT_PX*sizeof(uint8_t));
+
 	switch(cmd) {
 		case CMD_RESET:
 			palClearPad(GPIOD, GPIOD_LED1);
@@ -102,15 +110,18 @@ static void process_command(uint8_t cmd)
 //			chThdSleepMilliseconds(400);
 //			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+16000, 2000);
 //			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+70*100, 70*100);
-			send_image_half();
+//			send_image_half(img_buffer);
 //			send_image()
 			break;
 		case CMD_GET_DATA:
 //			com_receive_data((BaseSequentialStream *)&SD3);
 			break;
 		case CMD_DRAW:
-			capture_image();
-
+			capture_image(img_buffer,color);
+			path=path_planning(img_buffer,color);
+			// Path te renvoit les coordonnées x et y du trajet à parcourir...normalement.
+			// color  change sa taille et a dorénavant la même taille que path. Chaque point a sa propre couleur
+			// assignée.
 			chprintf((BaseSequentialStream *)&SDU1, "Image captured \r \n");
 			break;
 		case CMD_INTERACTIVE:

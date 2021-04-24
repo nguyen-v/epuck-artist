@@ -42,7 +42,7 @@ static uint16_t size_edges = 0;
  * 					tu peuvent également être génératrice de kernel Panic
  */
 
-cartesian_coord *path_planning(uint8_t *img_buffer, enum colour *color){
+cartesian_coord *path_planning(uint8_t *img_buffer, uint8_t *color){
 
 	struct edge_track *contours = (struct edge_track*)malloc(5000*sizeof(struct edge_track));			// Unless we find a way to quantify it, the size of this array will be chosen arbitrarily
 	struct edge_pos *edges = (struct edge_pos*)malloc(5000*sizeof(struct edge_pos));			// The same goes for this array
@@ -116,7 +116,7 @@ cartesian_coord *path_planning(uint8_t *img_buffer, enum colour *color){
 	status[0] = init;
 	nearest_neighbour(edges, status);
 	cartesian_coord* final_path = (cartesian_coord*)malloc(total_size*sizeof(cartesian_coord));
-	color = (enum colour*)realloc(final_path,total_size*sizeof(enum colour));
+	color = (uint8_t*)realloc(final_path,total_size*sizeof(uint8_t));
 
 
 	for(uint8_t i = 0; i < size_edges; i+=2){
@@ -126,7 +126,7 @@ cartesian_coord *path_planning(uint8_t *img_buffer, enum colour *color){
 				final_path[j].y = contours[j].pos.y;
 				color[j] = contours[j].color;
 				if(j == edges[i].index || j == edges[i+1].index)
-					color[j] = white;
+					color[j] = 0;
 			}
 		} else {
 			if(status[i] == end){
@@ -135,7 +135,7 @@ cartesian_coord *path_planning(uint8_t *img_buffer, enum colour *color){
 					final_path[j].y = contours[j].pos.y;
 					color[j] = contours[j].color;
 					if(j == edges[i].index || j == edges[i+1].index)
-						color[j] = white;
+						color[j] = 0;
 				}
 			}
 		}
@@ -223,7 +223,7 @@ for(uint8_t y = 1 ; y < IM_HEIGHT_PX;++y){
  * 		  area around it and follows the countour until it reaches the edge. With this algorithm, we can tell apart edges from simple lines depending on the number
  * 		  of neighbours around them.
  */
-void edge_tracing(struct edge_track *contours, struct edge_pos *edges, enum colour *color){
+void edge_tracing(struct edge_track *contours, struct edge_pos *edges, uint8_t *color){
 
 	uint8_t diag_px_priority = 0, temp_x = 0, temp_y = 0, next_x = 0, next_y = 0, last_x = 0, last_y = 0, j = 0, k = 0;
 	uint8_t start_end = 0, tracing_progress = 0, next_px = 0;
@@ -509,7 +509,7 @@ void img_resize(struct cartesian_coord* path, uint16_t path_size){
 }
 
 
-void save_pos(struct edge_track *pos, uint8_t x, uint8_t y, uint8_t label, uint8_t start_end, enum colour color, uint8_t k){
+void save_pos(struct edge_track *pos, uint8_t x, uint8_t y, uint8_t label, uint8_t start_end, uint8_t color, uint8_t k){
 
 	pos[k].pos.x= x;
 	pos[k].pos.y = y;

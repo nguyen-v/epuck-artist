@@ -60,9 +60,6 @@ const int8_t Ky[] = {1, 2, 1,
 				   0, 0, 0,
 				   -1, -2, -1};
 
-static uint8_t *img_buffer;
-static enum colour color[IM_LENGTH_PX*IM_HEIGHT_PX];
-
 static float theta[(IM_LENGTH_PX*IM_HEIGHT_PX)]={0};
 static float I_mag[(IM_LENGTH_PX*IM_HEIGHT_PX)]={0};
 
@@ -74,7 +71,7 @@ static float I_mag[(IM_LENGTH_PX*IM_HEIGHT_PX)]={0};
  * @brief				Captures a single image for a given length and height.
  * 						Those function do not work unless they are put within a thread....
  */
-void capture_image(void){
+void capture_image(uint8_t* img_buffer, uint8_t* color){
 	 /**
 	 * @brief   Sets the brigthness of the camera
 	 *
@@ -110,12 +107,12 @@ void capture_image(void){
 	dcmi_capture_start();
 	wait_image_ready();
 	img_buffer = dcmi_get_last_image_ptr();
-	canny_edge();
+	canny_edge(img_buffer, color);
 }
 
 static uint8_t img_temp_buffer[(IM_LENGTH_PX*IM_HEIGHT_PX)] = {0}; // to delete just a test
 
-void send_image(void) {
+void send_image(uint8_t* img_buffer) {
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer, 4000);
 	chThdSleepMilliseconds(400);
@@ -129,7 +126,7 @@ void send_image(void) {
 
 }
 
-void send_image_half(void) {
+void send_image_half(uint8_t* img_buffer) {
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer, 4000);
 	chThdSleepMilliseconds(400);
@@ -159,7 +156,7 @@ void send_image_half(void) {
 /**
  * @brief				Initalizes all modules.
  */
-void canny_edge(void){
+void canny_edge(uint8_t *img_buffer, uint8_t *color){
 //	uint8_t *canny_edge(enum colour *color)
 
 	//image conversion from RGB to grayscale + saves the color for each pixel in a separate array//
@@ -193,13 +190,13 @@ void canny_edge(void){
 		blue_px = (uint8_t)img_buffer[i+1] & 0x1F;
 
 		if(red_px < low_threshold[0] && blue_px < low_threshold[1] && (uint8_t)green_px/2 < low_threshold[2])
-			color[i/2] = black;
+			color[i/2] = 1;
 		else if(red_px > blue_px && red_px > (uint8_t)green_px/2)
-			color[i/2]= red;
+			color[i/2]= 2;
 		else if(blue_px > (uint8_t)green_px/2 && blue_px > red_px)
-			color[i/2] =blue;
+			color[i/2] = 3;
 		else if((uint8_t) green_px/2 > red_px && (uint8_t) green_px/2 > red_px)
-				color[i/2] = green;
+				color[i/2] = 4;
 
 
 		img_buffer[i/2] = (0.2989 * (float)red_px) + (0.5870 * (float)green_px / 2.0) + (0.1140 * (float)blue_px);
