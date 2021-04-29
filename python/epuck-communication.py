@@ -9,6 +9,7 @@ import time
 import numpy as np
 import struct
 from threading import Thread
+from PIL import Image # read image
 
 # ===========================================================================
 #  Module constants.                                                         
@@ -73,6 +74,84 @@ COMMANDS = (
 #     # def run(self):
 
 #     #     while(self.alive):
+
+def receive_image(ser):
+    state = 0
+
+    while(state != 5):
+        #reads 1 byte
+        c1 = ser.read(1)
+        #timeout condition
+        if(c1 == b''):
+            return [];
+
+        if(state == 0):
+            if(c1 == b'S'):
+                state = 1
+            else:
+                state = 0
+        elif(state == 1):
+            if(c1 == b'T'):
+                state = 2
+            elif(c1 == b'S'):
+                state = 1
+            else:
+                state = 0
+        elif(state == 2):
+            if(c1 == b'A'):
+                state = 3
+            elif(c1 == b'S'):
+                state = 1
+            else:
+                state = 0
+        elif(state == 3):
+            if(c1 == b'R'):
+                state = 4
+            elif (c1 == b'S'):
+                state = 1
+            else:
+                state = 0
+        elif(state == 4):
+            if(c1 == b'T'):
+                state = 5
+            elif (c1 == b'S'):
+                state = 1
+            else:
+                state = 0
+
+    print("Receiving image")
+
+
+
+    toRead = 4000
+    rcv_buffer = b''
+    # print(rcv_buffer)
+    # print(len(rcv_buffer))
+    #reads the data
+    i = 0
+    # while i < toRead:
+    #     print(ser.read())
+    #     i +=1
+
+# WORKING 90X100 rgb
+    # rcv_buffer += ser.read(toRead)
+    # rcv_buffer += ser.read(toRead)
+    # rcv_buffer += ser.read(toRead)
+    # rcv_buffer += ser.read(toRead)
+    # rcv_buffer += ser.read(2000)
+
+    rcv_buffer += ser.read(toRead)
+    rcv_buffer += ser.read(toRead)
+    rcv_buffer += ser.read(1000)
+
+    new_buffer = bytearray(len(rcv_buffer))
+    # new_buffer[0::2] = rcv_buffer[1::2]
+    # new_buffer[1::2] = rcv_buffer[0::2]
+    # im = Image.frombytes("RGB", (100, 90), bytes(new_buffer), "raw", "BGR;16")
+    im = Image.frombytes("L", (100, 90), bytes(rcv_buffer), "raw")
+    nameimg ="Image"
+    im.show(title=nameimg)
+    im.save("C:/Users/41786/Desktop/Projects/BA-6/SE/img" + ".png", "PNG")
 
 def parse_arg():
     port = SERIAL_PORT_DEFAULT
@@ -192,6 +271,8 @@ def main():
         send_command(ser, command)
         if command == 'G':
             send_move_data(ser)
+        if command == 'B':
+            receive_image(ser)
 if __name__=="__main__":
     main()
     
