@@ -1,20 +1,39 @@
-#ifndef SRC_MODULES_INCLUDE_MOD_IMG_PROCESSING_H_
-#define SRC_MODULES_INCLUDE_MOD_IMG_PROCESSING_H_
+/*
+ * @file	mod_path.h
+ * @brief	Exported functions and constants related to
+ * 			image processing and capture
+ */
 
-//enum colour{white, black, red, blue, green}; white = 0, black = 1, red = 2, blue = 3, green = 4
-#include "ch.h"
-#include "hal.h"
+#ifndef _MOD_IMG_PROCESSING_H_
+#define _MOD_IMG_PROCESSING_H_
 
+/*===========================================================================*/
+/* Module exported constants.                                                */
+/*===========================================================================*/
 
 #define IM_LENGTH_PX 100
 #define IM_HEIGHT_PX 90
+#define IM_MAX_VALUE 255
 
-void capture_image(uint8_t *img_buffer, uint8_t* color);
-void im_acquisition(void);
-void send_image(uint8_t* img_buffer);
-void send_image_half(uint8_t* img_buffer);
-//uint8_t *canny_edge(enum colour *color);
-void canny_edge(uint8_t *img_buffer, uint8_t *color);
+/*===========================================================================*/
+/* External declarations.                                                    */
+/*===========================================================================*/
 
+/**
+ * @brief						captures an image from camera and calls
+ * 								image processing and path tracing functions
+ * @return						none
+ */
+void capture_image(void);
 
-#endif /* SRC_MODULES_INCLUDE_MOD_IMG_PROCESSING_H_ */
+/**
+ * @brief						returns image_buffer
+ * @return						pointer to image_buffer
+ */
+uint8_t* get_img_buffer(void);
+
+// rewrite these
+void send_image(void);
+void send_image_half(void);
+
+#endif /* _MOD_IMG_PROCESSING_H_ */
