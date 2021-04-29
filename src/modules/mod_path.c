@@ -3,580 +3,699 @@
  * @brief   Handles the capture and the processing of an image.
  */
 
-// C standard header files
 
-#include <math.h>
+/** ---------------------------------------------------------------------------
+*
+* Main buffer structure:
+*
+* -----------------------------------------------------------------------------
+*
+* contours: 	size: size_contours
+* contains positions of each active pixel, ordered so that it follows a contour.
+*
+* -----------------------------------------------------------------------------
+*
+* edges: 		size: size_edges
+* contains positions of extremities.
+* Ordered by pairs, i.e. edges[0] goes with edges[1] and so on.
+* note: Index is associated to the pixel position at the
+* position <index> in the contours buffer.
+*
+* -----------------------------------------------------------------------------
+*
+* final_path:	size: total_size
+* contains the final positions that the robot has to follow.
+* note: final_path[0] contains initial robot position
+*
+* -----------------------------------------------------------------------------
+*
+* color:		size: total_size
+* contains the color associated to each pixel in final_path.
+*
+* -----------------------------------------------------------------------------
+*
+* status:		size: size_edges
+* contains edge status (start, end).
+* note: it is separated from the edge_pos structure to avoid padding.
+*
+* -----------------------------------------------------------------------------
+*/
+
+// C standard header files
+#include <stdlib.h>
+#include <stdint.h>
 
 // ChibiOS headers
 #include "ch.h"
 #include "hal.h"
 #include <chprintf.h>
 #include <usbcfg.h>
-#include <mod_path.h>
 
+// Module headers
+#include <mod_path.h>
+#include <tools.h>
 #include <mod_img_processing.h>
+
+/*===========================================================================*/
+/* Module constants.                                                         */
+/*===========================================================================*/
 
 #define INIT_ROBPOS_PX 50
 #define INIT_ROBPOS_PY 0
-#define RESIZE_COEF 10
 
-// This value dictates the efficacity of the path optimization algorithm.
-// A higher value would give us a path with sharp turns while a lower value would give us curved turns
+/** this dictates the maximum perpendicular distance in pixels between
+ * approximated lines of optimized contour buffer and corresponding points of
+ * the non optimized contour buffer.
+ * Smaller values lead to more points for approximating a shape.
+ */
 
-#define EPSILON 0.02f
+#define MAX_PERP_DIST 0.75f
 
-const int8_t dx[] = {0, -1, +1, -1};
-const int8_t dy[] = {-IM_LENGTH_PX, 0, -IM_LENGTH_PX, -IM_LENGTH_PX};
+/** max allowed distance between two positions in the final buffer.
+ * this parameter is important because the robot needs more than two points
+ * to draw a straight line (mechanical constraint)
+ */
+#define MAX_PIXEL_DIST 3
 
-static uint8_t label[IM_LENGTH_PX*IM_HEIGHT_PX] = {0};
+/*===========================================================================*/
+/* Module local variables.                                                   */
+/*===========================================================================*/
+
+static edge_pos* edges;
+static edge_track* contours;
+
+static struct edge_track* res_out;
+static struct edge_track* new_contour;
+
+static uint8_t* status;
 
 static uint16_t size_contours = 0;
 static uint16_t size_edges = 0;
 
+/*===========================================================================*/
+/* Module local functions.                                                   */
+/*===========================================================================*/
+
 /**
- * @brief			This functions utilizes all the other functions defined above in order to implement the complete path finding program
- *
- *
- * 					IMPORTANT : C'est cette fonction là qui sera appelée dans le main.c. Les tests devraient pouvoir nous dire quelle fonction
- * 					invoquée à l'intérieur de path planning est susceptible de causer un Kernel Panic. Les deux premières allocations de mémoire que
- * 					tu peuvent également être génératrice de kernel Panic
+ * @brief				calculates pixel position of 1D image buffer
+ * @param[in]	x		x coordinate in range [0, IM_LENGTH_PX]
+ * @param[in]	y		y coordinate in range [0, IM_HEIGHT_PX]
+ * @return				corresponding 1D buffer position
  */
+static uint16_t position(uint8_t pos_x, uint8_t pos_y){
 
-cartesian_coord *path_planning(uint8_t *img_buffer, uint8_t *color){
-
-	struct edge_track *contours = (struct edge_track*)malloc(2000*sizeof(struct edge_track));			// Unless we find a way to quantify it, the size of this array will be chosen arbitrarily
-	struct edge_pos *edges = (struct edge_pos*)malloc(2000*sizeof(struct edge_pos));			// The same goes for this array
-													// Though both can be realocated later on...
-	edges[0].pos.x = INIT_ROBPOS_PX;
-	edges[0].pos.y = INIT_ROBPOS_PY;
-	edges[0].index = 0;
-	++size_edges;
-
-	//----------- This part labels the contours and extracts them into one single array conveniently named "Contours" ---------------//
-
-	path_labelling(img_buffer);
-	edge_tracing(contours, edges, color);
-	edges = (struct edge_pos*)realloc(edges, size_edges*sizeof(struct edge_pos));
-	contours = (struct edge_track*)realloc(contours, size_contours*sizeof(struct edge_track));  //We realocate the proper memory weight for each array;
-
-	//-------- This part separates all the contours and optimizes them separately before reuniting them together -----------//
-
-	uint16_t total_size = 0;
-	uint16_t contours_size = 0;
-
-	for(uint8_t i = 0; i < size_edges/2; ++i){
-		uint16_t k = 0;
-		uint16_t length = edges[i*2 + 2].index - edges[i*2 + 1].index + 1;
-
-		struct edge_track res_out[length];
-		memset(res_out, 0, length*sizeof(struct edge_track));
-
-		struct edge_track new_contour[length];
-		memset(new_contour, 0, length*sizeof(struct edge_track));
-
-		for(uint8_t n = 0; n < length; ++n){
-			new_contour[n] = contours[contours_size + n];
-		}
-
-		contours_size += length;
-		uint16_t final_size = path_optimization(new_contour,length, res_out,length);
-
-		for(uint8_t j = total_size; j < total_size + final_size; ++j){
-				contours[j] = res_out[k];
-				++k;
-		}
-		total_size += final_size;
-	}
-	contours = (struct edge_track*)realloc(contours,total_size*sizeof(struct edge_track));
-
-
-	//-------------------------------- This part decides the final path of the robot -----------------------//
-//
-//	// We must first find the position of each and every edge again
-//	uint16_t edge_index[size_edges];
-//	memset(edge_index, 0, size_edges*sizeof(uint16_t));
-//
-//	uint16_t k = 1;
-//	edge_index[0] = 0;
-//	edge_index[size_edges - 1] = total_size - 1;
-//	for(uint8_t i = 1; i < size_edges-1; ++i){
-//		if(contours[i].label != contours[i-1].label){
-//			edge_index[k] = i-1;
-//			edge_index[++k] = i;
-//			++k;
-//		}
-//	}
-
-	//---------------------- This part reorganizes the edges' positions. With this, we know how to read the contours table -----------//
-
-
-	enum edge_status status[size_edges];
-	memset(status, 0, size_edges*sizeof(enum edge_status));
-
-	status[0] = init;
-	nearest_neighbour(edges, status);
-	cartesian_coord* final_path = (cartesian_coord*)malloc(total_size*sizeof(cartesian_coord));
-	color = (uint8_t*)realloc(final_path,total_size*sizeof(uint8_t));
-
-
-	for(uint8_t i = 0; i < size_edges; i+=2){
-		if(status[i] == start){
-			for(uint16_t j = edges[i].index; j <= edges[i+1].index; ++j){
-				final_path[j].x = contours[j].pos.x;
-				final_path[j].y = contours[j].pos.y;
-				color[j] = contours[j].color;
-				if(j == edges[i].index || j == edges[i+1].index)
-					color[j] = 0;
-			}
-		} else {
-			if(status[i] == end){
-				for(uint16_t j = edges[i].index; j >= edges[i+1].index; --j){
-					final_path[j].x = contours[j].pos.x;
-					final_path[j].y = contours[j].pos.y;
-					color[j] = contours[j].color;
-					if(j == edges[i].index || j == edges[i+1].index)
-						color[j] = 0;
-				}
-			}
-		}
-	}
-	img_resize(final_path,total_size);
-	size_edges = 0;
-	free(contours);
-	free(edges);
-	return final_path;
+	uint16_t position = pos_x + (uint16_t)pos_y*IM_LENGTH_PX;
+	return position;
 }
 
 
-
-
-
-
-void path_labelling(uint8_t *img_buffer){
-
-	uint16_t count_lab[IM_LENGTH_PX] = {0};
-	uint8_t counter = edge_scanning(img_buffer,count_lab);
-	flatten(count_lab,counter);
-	for(uint8_t x=0 ;x < IM_LENGTH_PX; x++){
-		for(uint8_t y=0 ; y < IM_HEIGHT_PX; y++){
-			label[position(x,y)]=count_lab[label[position(x,y)]];
-		}
-	}
-}
-
-
-
 /**
- * @brief				Now here's a tricky one. Path scanning is done using a Two pass parallel Connected-component labeling algorithm.
- * 				This algorithm uses a 8 neighbour checking system and raster scanning to attribute labels to defined edges.
- *
+ * @brief						fills contours and edges buffer with active pixels
+ * @param[in]	img_buffer		pointer to image buffer
+ * @param[out]	contours		pointer to contour buffer
+ * @param[out]	edges			pointer to edges buffer
+ * @return						none
  */
-uint8_t edge_scanning(uint8_t *img_buffer, uint16_t *count_lab){
+static void path_tracing(uint8_t* img_buffer, edge_track *contours, edge_pos *edges)
+{
+	// max has to be at IM_MAX_VALUE (because of output of canny_edge). Other values are chosen arbitrarily.
+	enum px_status {max = IM_MAX_VALUE, visited = IM_MAX_VALUE-1, rewind = IM_MAX_VALUE-2, begin = IM_MAX_VALUE-3};
+	const int8_t dx = 1;
+	const int8_t dy = IM_LENGTH_PX;
 
+	bool extremity_found = false;
+
+	uint16_t edge_index = 0;
+
+	uint16_t x_temp = 1;
+	uint16_t y_temp = 1;
 	uint16_t pos = 0;
-	uint8_t counter = 1;
-
-for(uint8_t y = 1 ; y < IM_HEIGHT_PX;++y){
-	for(uint8_t x = 1 ; x < IM_LENGTH_PX;++x){
+	for(uint8_t x = 1; x<IM_LENGTH_PX-1; ++x) {
+		for(uint8_t y=1; y< IM_HEIGHT_PX-1; ++y) {
 			pos = position(x,y);
-			if(img_buffer[pos]){
-				if(!img_buffer[pos + dx[0] + dy[0] ]){
-					if(img_buffer[pos + dx[1] + dy[1]]){
+			x_temp = x;
+			y_temp = y;
+			// Start from a pixel and move until extremity is found
+			extremity_found = false;
+			if(img_buffer[pos] == max) {
 
-						label[pos] = label[pos + dx[1] + dy[1]];
-						if(img_buffer[pos + dx[2] + dy[2]]){
-							merge(count_lab,label[pos],label[pos + dx[2] + dy[2]]);
-						}
+				img_buffer[pos] = visited;
+				bool has_converged = false;
+				while(!extremity_found) {
+					// First check pixels with max intensity (not visited yet)
+					// right
+					if(img_buffer[pos+dx]==max) {
+						pos += dx;
+						++x_temp;
 					}
-					else{
-						if(img_buffer[pos + dx[2] + dy[2]]){
-							label[pos] = label[pos + dx[2] + dy[2]];
-							if(img_buffer[pos + dx[3] + dy[3]]){
-								merge(count_lab,label[pos],label[pos + dx[3] + dy[3]]);
-							}
-						}
-						else{
-							if(img_buffer[pos + dx[3] + dy[3]]){
-								label[pos] = label[pos + dx[3] + dy[3]];
-							}
-							else{
-								label[pos] = counter;
-								count_lab[counter] = counter;
-								++counter;
-							}
-						}
+					// left
+					else if(img_buffer[pos-dx]==max) {
+						pos -= dx;
+						--x_temp;
 					}
+					// bottom
+					else if(img_buffer[pos+dy]==max) {
+						pos += dy;
+						++y_temp;
+					}
+					// top
+					else if(img_buffer[pos-dy]==max) {
+						pos -= dy;
+						--y_temp;
+					}
+					// bottom right
+					else if(img_buffer[pos+dx+dy]==max) {
+						pos += (dx+dy);
+						++x_temp; ++y_temp;
+					}
+					// bottom left
+					else if(img_buffer[pos-dx+dy]==max) {
+						pos -= (dx-dy);
+						--x_temp; ++y_temp;
+					}
+					// top right
+					else if(img_buffer[pos+dx-dy]==max) {
+						pos += (dx-dy);
+						++x_temp; --y_temp;
+					}
+					// top left
+					else if(img_buffer[pos-dx-dy]==max) {
+						pos -= (dx+dy);
+						--x_temp; --y_temp;
+					}
+					// Here we allow the robot to come back ONCE on a pixel that
+					// has been marked as "rewind"
+					else if(!has_converged && img_buffer[pos+dx]==rewind) {
+						pos += dx;
+						++x_temp;
+						has_converged = true;
+					}
+					// left
+					else if(!has_converged && img_buffer[pos-dx]==rewind) {
+						pos -= dx;
+						--x_temp;
+						has_converged = true;
+					}
+					// bottom
+					else if(!has_converged && img_buffer[pos+dy]==rewind) {
+						pos += dy;
+						++y_temp;
+						has_converged = true;
+					}
+					// top
+					else if(!has_converged && img_buffer[pos-dy]==rewind) {
+						pos -= dy;
+						--y_temp;
+						has_converged = true;
+					}
+					// bottom right
+					else if(!has_converged && img_buffer[pos+dx+dy]==rewind) {
+						pos += (dx+dy);
+						++x_temp; ++y_temp;
+						has_converged = true;
+					}
+					// bottom left
+					else if(!has_converged && img_buffer[pos-dx+dy]==rewind) {
+						pos -= (dx-dy);
+						--x_temp; ++y_temp;
+						has_converged = true;
+					}
+					// top right
+					else if(!has_converged && img_buffer[pos+dx-dy]==rewind) {
+						pos += (dx-dy);
+						++x_temp; --y_temp;
+						has_converged = true;
+					}
+					// top left
+					else if(!has_converged && img_buffer[pos-dx-dy]==rewind) {
+						pos -= (dx+dy);
+						--x_temp; --y_temp;
+						has_converged = true;
+					}
+					else {
+						extremity_found = true;
+
+						edges[edge_index].pos.x = x_temp;
+						edges[edge_index].pos.y = y_temp;
+						edges[edge_index].index = size_contours;
+
+						contours[size_contours].pos.x = x_temp;
+						contours[size_contours].pos.y = y_temp;
+						contours[size_contours].start_end = 1;
+
+						++edge_index;
+					}
+					img_buffer[pos] = visited;
 				}
-				else{
-					label[pos] = label[pos + dx[0] + dy[0]];
+
+				// Once extremity is found, rewind the path and find second extremity.
+				img_buffer[pos] = begin; // this allows overlapping back on the starting position (e.g. closed curve)
+
+				extremity_found = false;
+				while(!extremity_found) {
+					status = 0;
+					// Check visited pixels first (to avoid rewinding the wrong pixels)
+
+					// right
+					if(img_buffer[pos+dx]==visited) {
+						pos += dx;
+						++x_temp;
+					}
+					// left
+					else if(img_buffer[pos-dx]==visited) {
+						pos -= dx;
+						--x_temp;
+					}
+					// bottom
+					else if(img_buffer[pos+dy]==visited) {
+						pos += dy;
+						++y_temp;
+					}
+					// top
+					else if(img_buffer[pos-dy]==visited) {
+						pos -= dy;
+						--y_temp;
+					}
+					// bottom right
+					else if(img_buffer[pos+dx+dy]==visited) {
+						pos += (dx+dy);
+						++x_temp; ++y_temp;
+					}
+					// bottom left
+					else if(img_buffer[pos-dx+dy]==visited) {
+						pos -= (dx-dy);
+						--x_temp; ++y_temp;
+					}
+					// top right
+					else if(img_buffer[pos+dx-dy]==visited) {
+						pos += (dx-dy);
+						++x_temp; --y_temp;
+					}
+					// top left
+					else if(img_buffer[pos-dx-dy]==visited) {
+						pos -= (dx+dy);
+						--x_temp; --y_temp;
+					}
+					// Then, check max pixels or starting position.
+					// Note: we don't want to connect back to starting position if line length is 2 px
+					// size_contours-1 != edges[edge_index-1].index) handles this condition
+
+					else if(img_buffer[pos+dx]==max || (img_buffer[pos+dx]==begin
+							&& size_contours-1 != edges[edge_index-1].index)) {
+						pos += dx;
+						++x_temp;
+					}
+					// left
+					else if(img_buffer[pos-dx]==max || (img_buffer[pos-dx]==begin
+							&& size_contours-1 != edges[edge_index-1].index)) {
+						pos -= dx;
+						--x_temp;
+					}
+					// bottom
+					else if(img_buffer[pos+dy]==max || (img_buffer[pos+dy]==begin
+							&& size_contours-1 != edges[edge_index-1].index)) {
+						pos += dy;
+						++y_temp;
+					}
+					// top
+					else if(img_buffer[pos-dy]==max || (img_buffer[pos-dy]==begin
+							&& size_contours-1 != edges[edge_index-1].index)) {
+						pos -= dy;
+						--y_temp;
+					}
+					// bottom right
+					else if(img_buffer[pos+dx+dy]==max || (img_buffer[pos+dx+dy]==begin
+							&& size_contours-1 != edges[edge_index-1].index)) {
+						pos += (dx+dy);
+						++x_temp; ++y_temp;
+					}
+					// bottom left
+					else if(img_buffer[pos-dx+dy]==max || (img_buffer[pos-dx+dy]==begin
+							&& size_contours-1 != edges[edge_index-1].index)) {
+						pos -= (dx-dy);
+						--x_temp; ++y_temp;
+					}
+					// top right
+					else if(img_buffer[pos+dx-dy]==max || (img_buffer[pos+dx-dy]==begin
+							&& size_contours-1 != edges[edge_index-1].index)) {
+						pos += (dx-dy);
+						++x_temp; --y_temp;
+					}
+					// top left
+					else if(img_buffer[pos-dx-dy]==max || (img_buffer[pos-dx-dy]==begin
+							&& size_contours-1 != edges[edge_index-1].index)) {
+						pos -= (dx+dy);
+						--x_temp; --y_temp;
+					}
+					else {
+						extremity_found = true;
+						edges[edge_index].pos.x = x_temp;
+						edges[edge_index].pos.y = y_temp;
+						edges[edge_index].index = size_contours;
+						contours[size_contours].start_end = 1;
+						++edge_index;
+					}
+					img_buffer[pos] = rewind;
+					if(!extremity_found) {
+						++size_contours;
+						contours[size_contours].start_end = 0;
+					}
+					contours[size_contours].pos.x = x_temp;
+					contours[size_contours].pos.y = y_temp;
+
+
 				}
+				++size_contours;
 			}
 		}
 	}
-	//counter est censé être le label max trouvé
-	return counter;
+	size_edges = edge_index;
 }
 
 
 /**
- * @brief This algorithm defines and isolates all the contours from the background. when a contour point is found, it checks for all the neighbours in a 8 pixel
- * 		  area around it and follows the countour until it reaches the edge. With this algorithm, we can tell apart edges from simple lines depending on the number
- * 		  of neighbours around them.
+ * @brief						optimizes the path, i.e. deletes redundant points between two edges
+ * @param[in]	contour			pointer to buffer containing one contour
+ * @param[out]	opt_contour		pointer to buffer containing one optimized contour
+ * @return						length of buffer containing one optimized contour (opt_contour)
  */
-void edge_tracing(struct edge_track *contours, struct edge_pos *edges, uint8_t *color){
+static uint16_t path_optimization(edge_track *contour, uint16_t size, edge_track* opt_contour, uint16_t opt_contour_len){
 
-	uint8_t diag_px_priority = 0, temp_x = 0, temp_y = 0, next_x = 0, next_y = 0, last_x = 0, last_y = 0, j = 0, k = 0;
-	uint8_t start_end = 0, tracing_progress = 0, next_px = 0;
-	uint8_t l = 1;
-	uint8_t first_value = 0;
-	uint16_t pos = 0;
-	uint8_t status = 0;
-
-//	for(uint8_t x = 1 ; x < IM_LENGTH_PX-1; x++){
-//		for(uint8_t y = 1 ; y < IM_HEIGHT_PX-1; y++){
-	for(uint8_t x = 0 ; x < IM_LENGTH_PX; x++){
-		for(uint8_t y = 0 ; y < IM_HEIGHT_PX; y++){
-			pos = position(x,y);
-			while(label[pos]){
-				if(!tracing_progress){
-				temp_x = x;
-				temp_y = y;
-				tracing_progress = 1;
-				}
-				if(label[pos - IM_LENGTH_PX] == label[pos]){
-					if((x == last_x && y-1 != last_y && next_px == 0 )|| (x == last_x && y-1 != last_y && next_px == 0)
-							|| (x != last_x && y-1 != last_y && next_px == 0) || !first_value){
-						next_x = x;
-						next_y = y-1;
-						next_px = 1;
-					}
-					++start_end;
-				}
-				if(label[pos - 1] == label[pos]){
-					if((x-1 != last_x && y == last_y && next_px == 0 ) || (x-1 == last_x && y != last_y && next_px == 0)
-							|| (x-1 != last_x && y != last_y && next_px == 0) || !first_value){
-						next_x = x-1;
-						next_y = y;
-						next_px = 1;
-					}
-					++start_end;
-				}
-				if((label[pos + 1] == label[pos]) && start_end < 3){
-					if((x+1 != last_x && y == last_y && next_px == 0) || (x+1 == last_x && y != last_y && next_px == 0)
-							|| (x+1 != last_x && y != last_y && next_px == 0) || !first_value){
-						next_x = x+1;
-						next_y = y;
-						next_px = 1;
-					}
-					++start_end;
-				}
-				if((label[pos + IM_LENGTH_PX] == label[pos]) && start_end < 3){
-					if((x == last_x && y+1 != last_y && next_px == 0 )|| (x == last_x && y+1 != last_y && next_px == 0)
-							|| (x != last_x && y+1 != last_y && next_px == 0)|| !first_value){
-						next_x = x;
-						next_y = y+1;
-						next_px = 1;
-					}
-					++start_end;
-				}
-
-				if(!start_end)
-					diag_px_priority = 1;
-
-				if((label[pos + 1 - IM_LENGTH_PX] == label[pos]) && start_end < 3){
-					if((x+1 != last_x && y-1 != last_y && diag_px_priority && next_px == 0 )|| (x+1 == last_x && y-1 != last_y && next_px == 0)
-							|| (x+1 != last_x && y-1 != last_y && next_px == 0)|| !first_value){
-						next_x = x+1;
-						next_y = y-1;
-						next_px = 1;
-					}
-					++start_end;
-				}
-				if((label[pos - 1 - IM_LENGTH_PX] == label[pos]) && start_end < 3){
-					if((x-1 != last_x && y-1 != last_y && diag_px_priority && next_px == 0 )|| (x-1 == last_x && y-1 != last_y && next_px == 0)
-							|| (x-1 != last_x && y-1 != last_y && next_px == 0)|| !first_value){
-						next_x = x-1;
-						next_y = y-1;
-						next_px = 1;
-					}
-					++start_end;
-				}
-				if((label[pos - 1 + IM_LENGTH_PX] == label[pos]) && start_end < 3){
-					if((x-1 != last_x && y+1 != last_y && diag_px_priority && next_px == 0 )|| (x-1 == last_x && y+1 != last_y && next_px == 0)
-							|| (x-1 != last_x && y+1 != last_y && next_px == 0)|| !first_value){
-						next_x = x-1;
-						next_y = y+1;
-						next_px = 1;
-					}
-					++start_end;
-				}
-				if((label[pos + 1 + IM_LENGTH_PX] == label[pos]) && start_end < 3){
-					if((x+1 != last_x && y+1 != last_y && diag_px_priority && next_px == 0 )|| (x+1 == last_x && y+1 != last_y && next_px == 0)
-							|| (x +1!= last_x && y+1 != last_y && next_px == 0)|| !first_value){
-						next_x = x+1;
-						next_y = y+1;
-						next_px = 1;
-					}
-					++start_end;
-				}
-
-				if(start_end){
-					if(start_end == 1){
-						status = 1;
-						save_edge_pos(edges, x, y, k, l);
-						++l;
-						++j;
-						++size_edges;
-					} else{
-						if(start_end == 2) status = 0;
-					}
-					++size_contours;
-				}
-				save_pos(contours, x, y, label[pos],status, color[pos], k);
-				++k;
-
-				label[position(last_x,last_y)] = 0;   // MAGIC VALUE -> Transforms label into background
-				last_x = x;
-				last_y = y;
-				x = next_x;
-				y = next_y;
-				pos = position(x,y);
-				next_px = 0;
-				start_end = 0;
-				first_value = 1;
-				if(j == 2){
-					label[position(x,y)] = 0;
-					x = temp_x;
-					y = temp_y;
-					j = 0;
-				}
-			}
-		}
-	}
-}
-
-/**
- * @brief This is an implementation of a path optimization algorithm which significantly reduces the total number of points
- * 		  in a contour. This is accomplished by measuring the maximum perpendicular distance between two point boundaries and all the other points
- * 		  in a chosen countour, then remeasure the max perpendicular distance between two obtained curves given by the [start;index] points and the [index;end] points.
- * 		  The EPSILON threshold can be varied and is used in order to choose which points will be cut. The higher the value, the sharpest our contour will be.
- */
-uint16_t path_optimization(struct edge_track *contours, uint16_t size, struct edge_track* dest, uint16_t destlen){
 
 	uint16_t index = 0;
 	float dmax = 0;
 	float distance = 0;
 
-	for(uint16_t i = 1; i + 1 < size  ; ++i)
-	{
-		distance = perpendicular_distance(contours[0].pos, contours[size-1].pos, contours[i].pos);
+
+	for(uint16_t i = 1; i < size; ++i){
+		distance = perpendicular_distance(contour[0].pos, contour[size-1].pos, contour[i].pos);
 		if(distance > dmax) {
 			index = i;
 			dmax = distance;
 		}
 	}
+	 /**
+	  * If the maximum distance is superior to MAX_PERP_DIST, the contour is divided into 2 subcontours which are
+	  * passed recursively into path_optimization again.
+	  *	n1 and n2 are the final size of the new subcontours computed recursively and are used to change
+	  *	the position of the dest pointer in which we will put the values of both edges of a subcontour
+	  */
 
-	if(dmax > EPSILON){
-		// Appel récursif
-		uint16_t n1 = path_optimization(contours, index + 1, dest, destlen);
-		if (destlen >= n1 - 1){
-			destlen -= n1 - 1;
-			dest += n1 - 1;
+	if(dmax > MAX_PERP_DIST){
+		// Recursive call
+		uint16_t n1 = path_optimization(contour, index + 1, opt_contour, opt_contour_len);
+		if (opt_contour_len >= n1 - 1){
+			opt_contour_len -= n1 - 1;
+			opt_contour += n1 - 1;
 		} else {
-			destlen = 0;
+			opt_contour_len = 0;
 		}
-		uint16_t n2 = path_optimization(contours + index, size-index, dest, destlen);
+		uint16_t n2 = path_optimization(contour + index, size-index, opt_contour, opt_contour_len);
 		return n1 + n2 - 1;
+
+	} else if(dmax == 0) {
+		uint16_t k = 0;
+		while(k*MAX_PIXEL_DIST < size){
+			opt_contour[k] = contour[k*MAX_PIXEL_DIST];
+			++k;
+		}
+		if(!((k-1)*MAX_PIXEL_DIST == size-1)){
+			opt_contour[k] = contour[size-1];
+			++k;
+		}
+		return k;
 	}
-	if(destlen >= 2) {
-		dest[0] = contours[0];
-		dest[1] = contours[size - 1];
+
+	if(opt_contour_len >= 2) {
+		opt_contour[0] = contour[0];
+		opt_contour[1] = contour[size - 1];
 	}
 	return 2;
 }
 
 
+
 /**
- * @brief   Implementation of the nearest neighbour algorithm. It calculates the shortest distance between its actual point and all other start/end points
- * 			If it finds one, the algorithm switches their index position in the edge_index array, notes both edges of the contour as being visited
- * 			and recalculates the distance from the newly found point to all the other unvisited points.
- *
+ * @brief						reorders edges indexes to match optimized contour buffer indexes
+ * @param[in] opt_contours_size size (length) of optimized contours buffer
+ * @return						none
  */
-void nearest_neighbour(struct edge_pos *edges, enum edge_status *status){
-
-	uint16_t visited[size_edges]; //remplacer par size_edges
-	memset(visited, 0, size_edges*sizeof(struct edge_track));
-
-	visited[0] = 1;
-
-
-	uint8_t algo_finished = 0;
-	uint16_t j = 1;
-
-	uint16_t counter = 0;
-	uint16_t counter_max = (size_edges - 1) / 2;
+static void reorder_edges_index(uint16_t opt_contours_size)
+{
 	uint16_t k = 0;
-
-	do{
-	float dmin = 0,d = 0;
-	uint16_t index = 0;
-
-	for(uint16_t i = 0; i < size_edges; ++i){
-
-		if(!visited[i]){
-			d = two_point_distance(edges[k].pos, edges[i].pos);
-			if(dmin == 0)
-				dmin = d;
-			if(d <= dmin){
-				dmin = d;
-				index = i;
-			}
+//		edges[size_edges - 1].index = total_size - 1;
+	uint16_t num_contours = 0;
+	for(uint16_t i = 0; i < opt_contours_size; ++i){
+		if(contours[i].start_end == 1){
+			edges[k].index = i;
+			++k;
+			++num_contours;
 		}
 	}
-	if(index == 1){
-	break;
-	}
-	if(index == 2){
-		struct edge_pos px_temp = {0};
-		px_temp = edges[j];
-		edges[j] = edges[index];
-		edges[index] = px_temp;
-		status[j] = end;
-		status[j+1] = start;
-		visited[j] = 1;
-		visited[j+1] = 1;
-		break;
-	}
+		chprintf((BaseSequentialStream *)&SDU1, "num_contours startend = %d \r\n",num_contours);
 
-	if(index%2==0){
-		//swap(edges[j+1],edges[index]);
-		struct edge_pos px_temp = {0};
-		px_temp = edges[j];
-		edges[j] = edges[index];
-		edges[index] = px_temp;
-		status[j] = end;
-		visited[j] = 1;
-		//swap(edges[j],edges[index-1]);
-		px_temp = edges[j+1];
-		edges[j+1] = edges[index-1];
-		edges[index-1] = px_temp;
-		status[j+1] = start;
-		visited[j+1] = 1;
-		k = j+1;
-		++counter;
-	}
-	else {
-		//swap(edges[j],edges[index]);
-		struct edge_pos px_temp = {0};
-		px_temp = edges[j];
-		edges[j] = edges[index];
-		edges[index] = px_temp;
-		status[j] = start;
-		visited[j] = 1;
-		//swap(edges[j+1],edges[index+1]);
-		px_temp = edges[j+1];
-		edges[j+1] = edges[index+1];
-		edges[index+1] = px_temp;
-		status[j+1] = end;
-		visited[j + 1] = 1;
-		k = j + 1;
-		++counter;
-	}
-	if(counter_max == counter){
-		algo_finished = 1;
-	}
-	j += 2;
-	}
-	while(!algo_finished);
-}
-
-
-void swap(uint16_t *edges1, uint16_t *edges2){
-
-	uint16_t temp = 0;
-	temp = *edges1;
-	edges1 = edges2;
-	*edges2 = temp;
-}
-
-
-void img_resize(struct cartesian_coord* path, uint16_t path_size){
-
-	for(uint16_t j = 0; j < path_size; ++j){
-		path[j].x *= RESIZE_COEF;
-		path[j].y *= RESIZE_COEF;
-	}
-}
-
-
-void save_pos(struct edge_track *pos, uint8_t x, uint8_t y, uint8_t label, uint8_t start_end, uint8_t color, uint8_t k){
-
-	pos[k].pos.x= x;
-	pos[k].pos.y = y;
-	pos[k].label = label;
-	pos[k].color = color;
-	pos[k].start_end = start_end;
-}
-
-
-void save_edge_pos(struct edge_pos *pos, uint8_t x, uint8_t y, uint8_t curve_index, uint8_t this_index){
-
-	pos[this_index].pos.x = x;
-	pos[this_index].pos.y = y;
-	pos[this_index].index = curve_index;
-}
-
-
-uint16_t position(uint8_t pos_x, uint8_t pos_y){
-
-	uint16_t position = pos_x + pos_y*IM_LENGTH_PX;
-	return position;
-}
-
-
-void flatten(uint16_t *count_lab, uint16_t count){
-
-	uint16_t k = 1;
-	for(uint16_t i=1 ;i<=count; i++){
-		if(count_lab[i] < i){
-			count_lab[i]=count_lab[count_lab[i]];
-		}
-		else{
-			count_lab[i]=k;
-			k++;
-		}
-	}
+	edges[size_edges - 1].index = opt_contours_size - 1;
 }
 
 
 /**
- * @brief		This function gives the same label to 2 pixels with different labels
+ * @brief						reorders edges buffer to minimize travel distance
+ * @return						none
  */
-uint16_t merge(uint16_t *count_lab, uint16_t x, uint16_t y){
+static void nearest_neighbour(void){
 
-	uint16_t rootx=x, rooty=y, z;
-	while(count_lab[rootx]!=count_lab[rooty]){
-		if(count_lab[rootx]>count_lab[rooty]){
-			if(count_lab[rootx]==rootx){
-				count_lab[rootx]=count_lab[rooty];
-				return count_lab[rootx];
+	uint16_t min_index = 0;
+	float min_distance = IM_HEIGHT_PX+IM_LENGTH_PX;
+	float distance = 0;
+
+	// first find edge pair closest to initial robot position
+	bool first_pos = true;
+	cartesian_coord init_pos;
+	init_pos.x = INIT_ROBPOS_PX; init_pos.y = INIT_ROBPOS_PY;
+	for(uint16_t start_index = 0; start_index < size_edges-1; start_index+=2) {
+		min_distance = IM_HEIGHT_PX+IM_LENGTH_PX;
+		for(uint16_t i = start_index; i < size_edges; ++i) {
+			// search for index with smallest distance
+			if (first_pos)
+				distance = two_point_distance(edges[i].pos, init_pos);
+			else
+				distance = two_point_distance(edges[i].pos, edges[start_index-1].pos);
+			if(distance < min_distance) {
+				min_distance = distance;
+				min_index = i;
 			}
-			z=count_lab[rootx];
-			count_lab[rootx]=count_lab[rooty];
-			rootx=z;
 		}
-		else{
-			if(rooty==count_lab[rooty]){
-				count_lab[rooty]=count_lab[rootx];
-				return count_lab[rootx];
-			}
-			z=count_lab[rooty];
-			count_lab[rooty]=count_lab[rootx];
-			rooty=z;
+		struct edge_pos edge_start_temp;
+		struct edge_pos edge_end_temp;
+		// if min_index is even, smaller index is at min_index
+		if (min_index%2 == 0) {
+			edge_start_temp = edges[min_index];
+			edge_end_temp = edges[min_index+1];
+			edges[min_index] = edges[start_index];
+			edges[min_index+1] = edges[start_index+1];
+			edges[start_index] = edge_start_temp;
+			edges[start_index+1] = edge_end_temp;
+			status[start_index] = start;
+
+		// if index is odd, smaller index is at min_index-1
+		} else {
+			edge_start_temp = edges[min_index];
+			edge_end_temp = edges[min_index-1];
+			edges[min_index-1] = edges[start_index];
+			edges[min_index] = edges[start_index+1];
+			edges[start_index] = edge_start_temp;
+			edges[start_index+1] = edge_end_temp;
+			status[start_index] = end;
+		}
+		// once first index is found, repeat for other edge pairs
+		first_pos = false;
+	}
+}
+
+
+
+
+/**
+ * @brief						resizes path buffer to fit into an image of size
+ * 								(canvas_size_x) x (canvas_size_y)
+ * @param[in]	canvas_size_x	canvas width in pixel
+ * @param[in]	canvas_size_y	canvas height in pixel
+ * @param[out]	path			pointer to path buffer
+ * @return						none
+ */
+static void img_resize(cartesian_coord* path, uint16_t canvas_size_x, uint16_t canvas_size_y){
+
+	// calculate resize coefficient
+	float resize_coeff_x = (float)canvas_size_x/IM_LENGTH_PX;
+	float resize_coeff_y = (float)canvas_size_x/IM_HEIGHT_PX;
+	float resize_coeff;
+
+	if (resize_coeff_x > resize_coeff_y)
+		resize_coeff = resize_coeff_y;
+	else
+		resize_coeff = resize_coeff_x;
+
+	// resize each position in path buffer
+	uint16_t path_length = data_get_length();
+	for (uint16_t i = 0; i < path_length; ++i) {
+		path[i].x *= resize_coeff;
+		path[i].y *= resize_coeff;
+	}
+
+}
+
+
+/*===========================================================================*/
+/* Module exported functions.                                                */
+/*===========================================================================*/
+
+void path_planning(void)
+{
+	// free previous position buffer
+	data_free_pos();
+
+	size_edges = 0;
+	size_contours = 0;
+
+	// get img_buffer containing result from canny edge detection algorithm
+	uint8_t* img_buffer = get_img_buffer();
+	uint16_t nb_pixels = 0;
+
+	// count number of active pixels (value = IM_MAX_VALUE)
+	uint16_t pos = 0;
+	for (uint8_t x = 0; x < IM_LENGTH_PX; ++x) {
+		for (uint8_t y = 0; y < IM_HEIGHT_PX; ++y) {
+			pos = position(x,y);
+			if (img_buffer[pos] == IM_MAX_VALUE)
+				++nb_pixels;
 		}
 	}
-	return (count_lab[rootx]);
+
+//	chprintf((BaseSequentialStream *)&SDU1, " nb_pixels %d \r\n", nb_pixels);
+
+	if(nb_pixels == 0)
+		return;
+
+	/**
+	 * allocate contours and edges with temporary size for edges
+	 * in accordance with the line_tracing algorithm, the "worst case scenario" is
+	 * when 3 pixels are in an "L" configuration, which would lead to 4 contours
+	 * (because the last pixel reattaches to the starting pixel, by design)
+	 * Thus, we need to allocate 4 slots per 3 pixels to be safe.
+	 */
+
+	contours = calloc(nb_pixels*4/3, sizeof(edge_track));
+	edges = calloc(nb_pixels*4/3, sizeof(edge_pos));
+
+	// fill contours and edge buffers and find their correct sizes
+	path_tracing(img_buffer, contours, edges);
+
+	// realloc edges and contours to correct size
+	contours = realloc(contours, size_contours*sizeof(edge_track));
+	edges = realloc(edges, size_edges*sizeof(edge_pos));
+
+	// optimize contour by deleting redudant positions in coutours buffer
+	uint16_t opt_contours_size = 0;
+	uint16_t contours_size = 0;
+	for(uint8_t i = 0; i < (size_edges)/2; ++i){
+		uint16_t start_index = edges[i*2].index;
+		uint16_t end_index = edges[i*2+1].index;
+		uint8_t loop = 0;
+
+		if(start_index == end_index){
+			contours[opt_contours_size] = contours[contours_size];
+			++opt_contours_size;
+			++contours_size;
+		} else {
+			uint16_t length = end_index - start_index + 1;
+			if(contours[start_index].pos.x == contours[end_index].pos.x && contours[start_index].pos.y == contours[end_index].pos.y){
+				--length;
+				++loop;
+			}
+
+			uint16_t k = 0;
+			res_out = malloc(length*sizeof(struct edge_track));
+			new_contour = malloc(length*sizeof(struct edge_track));
+			for(uint16_t n = 0; n < length; ++n){
+				new_contour[n] = contours[contours_size + n];
+			}
+
+			contours_size += length;
+			uint16_t final_size = path_optimization(new_contour,length, res_out,length);
+
+			for(uint16_t j = opt_contours_size; j < opt_contours_size + final_size; ++j){
+				contours[j] = res_out[k];
+				++k;
+			}
+
+			opt_contours_size += final_size;
+			if(loop){
+				contours[opt_contours_size] = contours[start_index];
+				++opt_contours_size;
+				++contours_size;
+			}
+			free(new_contour);
+			free(res_out);
+		}
+	}
+
+	// reallocate contour with new size
+	contours = realloc(contours, opt_contours_size*sizeof(edge_track));
+
+	// reorder edges buffer indexes to match optimized contour
+	reorder_edges_index(opt_contours_size);
+
+	// reorder the edges to minimize travel distance
+	status = calloc(size_edges, sizeof(uint8_t*));
+	nearest_neighbour();
+
+	// Allocate and fill final_path buffer
+	uint16_t total_size = opt_contours_size + 1;
+	cartesian_coord* final_path = data_alloc_xy(total_size);
+
+	cartesian_coord init_pos;
+	init_pos.x = INIT_ROBPOS_PX; init_pos.y = INIT_ROBPOS_PY;
+	final_path[0] = init_pos;
+
+	chprintf((BaseSequentialStream *)&SDU1, " size_edges %d \r\n", size_edges);
+	chprintf((BaseSequentialStream *)&SDU1, " size_contours %d \r\n", size_contours);
+	chprintf((BaseSequentialStream *)&SDU1, " opt_contours_size %d \r\n", opt_contours_size);
+	chprintf((BaseSequentialStream *)&SDU1, " opt_contours_size %d \r\n", total_size);
+
+
+	// Fill final_path buffer with optimized contour
+	uint16_t k = 1;
+	for (uint16_t i = 0; i < size_edges; i+=2) {
+		if(status[i] == start) {
+			for(uint16_t j = edges[i].index; j <= edges[i+1].index; ++j){
+				final_path[k].x = contours[j].pos.x;
+				final_path[k].y = contours[j].pos.y;
+				++k;
+			}
+		} else if(status[i] == end) {
+			for(int16_t j = edges[i].index; j >= edges[i+1].index; --j){ //int16 because j is decremented to -1 for an index of 0
+				final_path[k].x = contours[j].pos.x;
+				final_path[k].y = contours[j].pos.y;
+				++k;
+			}
+		}
+	}
+
+
+	for (uint16_t i = 0; i < total_size; ++i)
+		chprintf((BaseSequentialStream *)&SDU1, " final path %d x:%d y%d \r\n", i, final_path[i].x, final_path[i].y);
+
+	// free buffers
+	free(status);
+	free(contours);
+	free(edges);
 }
+
+
+
+
+
+
 
 
 
