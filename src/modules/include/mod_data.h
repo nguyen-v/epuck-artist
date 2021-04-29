@@ -15,6 +15,8 @@ typedef struct cartesian_coord {
 	uint16_t y;
 } cartesian_coord;
 
+enum Colors{white, black, red, blue, green};
+
 /*===========================================================================*/
 /* External declarations.                                                    */
 /*===========================================================================*/
@@ -25,6 +27,13 @@ typedef struct cartesian_coord {
  * @return				pointer to position buffer
  */
 cartesian_coord* data_get_pos(void);
+
+/**
+ * @brief				Returns pointer to color buffer
+ * @param				none
+ * @return				pointer to color buffer
+ */
+uint8_t* data_get_color(void);
 
 /**
  * @brief				Sets the length (number of coordinates)
@@ -48,6 +57,11 @@ uint16_t data_get_length(void);
  */
 void data_free(void);
 
+void data_free_pos(void);
+
+void data_free_color(void);
+
+
 /**
  * @brief				Allocates memory for the position buffer.
  *
@@ -65,5 +79,14 @@ cartesian_coord* data_alloc_xy(uint16_t length);
  * 						NULL if allocation failed.
  */
 uint8_t* data_alloc_color(uint16_t length);
+
+/**
+ * @brief				Rellocates memory for the color buffer.
+ *
+ * @param[in] 	length 	Length (number of coordinates)
+ * @return				Pointer to color buffer.
+ * 						NULL if allocation failed.
+ */
+uint8_t* data_realloc_color(uint16_t length);
 
 #endif
