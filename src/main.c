@@ -57,7 +57,6 @@
 // TO BE DELETED
 
 static uint8_t *img_buffer;
-static cartesian_coord *path;
 
 /*===========================================================================*/
 /* Module local functions.                                                   */
@@ -112,13 +111,16 @@ static void process_command(uint8_t cmd)
 //			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+70*100, 70*100);
 //			send_image_half(img_buffer);
 //			send_image()
+			send_image_half();
 			break;
 		case CMD_GET_DATA:
 //			com_receive_data((BaseSequentialStream *)&SD3);
 			break;
 		case CMD_DRAW:
-			capture_image(img_buffer,color);
-			path=path_planning(img_buffer,color);
+			capture_image();
+			chprintf((BaseSequentialStream *)&SDU1, "draw \r \n");
+//			path=path_planning();
+			path_planning();
 			// Path te renvoit les coordonnées x et y du trajet à parcourir...normalement.
 			// color  change sa taille et a dorénavant la même taille que path. Chaque point a sa propre couleur
 			// assignée.
