@@ -18,6 +18,8 @@
 
 #include <arm_math.h>
 
+//#include <integer.h>
+
 // Module headers
 #include <mod_img_processing.h>
 #include <mod_data.h>
@@ -27,22 +29,32 @@
 /* Module constants.                                                         */
 /*===========================================================================*/
 
-#define IM_LENGTH_PX 100
-#define IM_HEIGHT_PX 90
-#define XY_OFFSET_5x5 2
-#define XY_OFFSET_3x3 1
-#define RAD2DEG 180./M_PI
-#define DEG2RAD M_PI/180.
-#define COEFF 0.5f
+#define IM_LENGTH_PX 		100
+#define IM_HEIGHT_PX 		90
+#define XY_OFFSET_5x5 		2
+#define XY_OFFSET_3x3 		1
+#define RAD2DEG 			180./M_PI
+#define DEG2RAD 			M_PI/180.
+#define COEFF 				0.5f
 
 // Those threshold values were chosen arbitrarily, more values should be tested if possible
 // After testing, I noticed that low resolution images have a LOT of noise remaining in the final image.
 // The threshold values should be adjusted in order to reduce it to the maximum of our abilities
 
-#define HIGH_THRESHOLD 0.2
-#define LOW_THRESHOLD 0.1
-#define MIN_LUMINANCE 50.0 // if the maximum of all pixels is under this value, the picture is
-							// considered pitch black
+#define HIGH_THRESHOLD 		0.2
+#define LOW_THRESHOLD 		0.1
+
+// if the maximum of all pixels is under this value,
+// the picture is considered pitch black
+#define MIN_LUMINANCE 		50.0
+
+// color masks for RGB565 image format
+#define RED_MASK			0xF800
+#define GREEN_MASK			0x7E0
+#define BLUE_MASK			0x1F
+#define RGB_MAX_VALUE	    255.0f
+
+
 
 // The weights of the gaussian function were directly taken from the internet,
 // Would it be wise to test it for different values of the standard deviation ?
@@ -72,6 +84,54 @@ static float* I_mag;
 /*===========================================================================*/
 /* Module local functions.                                                   */
 /*===========================================================================*/
+//(from https://en.wikipedia.org/wiki/HSL_and_HSV)
+static float rgb_get_hue(uint8_t red, uint8_t green, uint8_t blue)
+{
+	float r = red/RGB_MAX_VALUE;
+	float g = green/RGB_MAX_VALUE;
+	float b = blue/RGB_MAX_VALUE;
+	float max = fmax(fmax(r, g), b);
+	float min = fmin(fmin(r, g), b);
+	float c = max - min;	// chroma
+	float H;
+	if (c == 0)
+		return 0;
+	if(max == r)
+		H = fmod((g-b)/c, 6);
+	else if (max == g)
+		H = (b-r)/c+2;
+	else if (max == b)
+		H = (r-g)/c+4;
+	else
+		return 0;
+
+	H *= 60.;
+//	return H < 0 ? H + 360 : H;
+	return H;
+
+}
+
+static float rgb_get_luma(uint8_t red, uint8_t green, uint8_t blue)
+{
+	float r = red/RGB_MAX_VALUE;
+	float g = green/RGB_MAX_VALUE;
+	float b = blue/RGB_MAX_VALUE;
+	return (0.2989 * (float)r) + (0.5870 * (float)g) + (0.1140 * (float)b);
+}
+
+static float rgb_get_sat(float luma, uint8_t red, uint8_t green, uint8_t blue)
+{
+	if (luma == 1 || luma == 0)
+		return 0;
+	float r = red/RGB_MAX_VALUE;
+	float g = green/RGB_MAX_VALUE;
+	float b = blue/RGB_MAX_VALUE;
+	float max = fmax(fmax(r, g), b);
+	float min = fmin(fmin(r, g), b);
+	float c = max - min;	// chroma
+
+	return c/(1-fabs(2*luma-1));
+}
 
 // IMPORTANT / MAGIC NUMBERS HAVE TO BE DEFINED //
 
@@ -90,28 +150,53 @@ static void canny_edge(void){
 	uint8_t* color = data_alloc_color(IM_LENGTH_PX * IM_HEIGHT_PX);
 
 	// image conversion from RGB to grayscale + saves the color for each pixel in a separate array
-	uint16_t red_px, blue_px, green_px = 0;
+	uint8_t red_px, blue_px, green_px = 0;
 	uint16_t low_threshold[3] = {0};
 	float average[3] ={0};
+	float hue_av = 0;
+	float sat_av = 0;
+	float lum_av = 0;
 	for(uint16_t i = 0; i < (IM_LENGTH_PX * IM_HEIGHT_PX)*2; i+=2){
+		uint16_t rgb565 = ((int16_t)img_buffer[i]  << 8) | img_buffer[i+1];
+		// extract color bits
+		red_px = (rgb565 & RED_MASK) >> 11;		// 0-31
+		green_px = (rgb565 & GREEN_MASK) >> 5;	// 0-63
+		blue_px = (rgb565 & BLUE_MASK);				// 0-31
 
-		red_px = (uint8_t)img_buffer[i] & 0xF8;
-		green_px = (uint16_t)((img_buffer[i] & 0x07) || (img_buffer[i+1] & 0xe0));
-		blue_px = (uint8_t)img_buffer[i+1] & 0x1F;
+		// convert to range 0-255 for each color
+		red_px <<= 3;
+		green_px <<= 2;
+		blue_px <<= 3;
+
+		// convert to HSL color space
+		hsl_color hsl;
+		hsl.hue = rgb_get_hue(red_px, green_px, blue_px);
+		hsl.lum = rgb_get_luma(red_px, green_px, blue_px);
+		hsl.sat = rgb_get_sat(hsl.lum, red_px, green_px, blue_px);
+
+		hue_av += hsl.hue;
+		sat_av += hsl.sat;
+		lum_av += hsl.lum;
 
 		average[0] += red_px;
-		average[1] += blue_px;
-		average[2] += (uint16_t)green_px/2;
+		average[1] += green_px;
+		average[2] += blue_px;
 		}
+		hue_av /= IM_LENGTH_PX*IM_HEIGHT_PX;
+		sat_av /= IM_LENGTH_PX*IM_HEIGHT_PX;
+		lum_av /= IM_LENGTH_PX*IM_HEIGHT_PX;
+
 
 		average[0] /= IM_LENGTH_PX*IM_HEIGHT_PX;
 		average[1] /= IM_LENGTH_PX*IM_HEIGHT_PX;
 		average[2] /= IM_LENGTH_PX*IM_HEIGHT_PX;
 
 		chprintf((BaseSequentialStream *)&SDU1, " av red %f\r\n", average[0]);
-		chprintf((BaseSequentialStream *)&SDU1, " av blue %f\r\n", average[1]);
-		chprintf((BaseSequentialStream *)&SDU1, " av green %f\r\n", average[2]);
-
+		chprintf((BaseSequentialStream *)&SDU1, " av green %f\r\n", average[1]);
+		chprintf((BaseSequentialStream *)&SDU1, " av blue %f\r\n", average[2]);
+		chprintf((BaseSequentialStream *)&SDU1, " av hue %f\r\n", hue_av);
+		chprintf((BaseSequentialStream *)&SDU1, " av sat %f\r\n", sat_av);
+		chprintf((BaseSequentialStream *)&SDU1, " av lum %f\r\n\n", lum_av);
 	for(uint8_t i=0; i < 3; ++i)
 		low_threshold[i] = (uint16_t)(COEFF*average[i]);
 
@@ -372,8 +457,9 @@ void capture_image(void){
 
 	po8030_advanced_config(FORMAT_RGB565, 200, 0, 4*IM_LENGTH_PX, 4*IM_HEIGHT_PX, SUBSAMPLING_X4, SUBSAMPLING_X4);
 //	po8030_set_brightness(64);
-	po8030_set_contrast(128);
-//	po8030_set_awb(1);
+	po8030_set_contrast(40);
+	po8030_set_awb(1);
+//	po8030_set_ae(1);
 	dcmi_disable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
