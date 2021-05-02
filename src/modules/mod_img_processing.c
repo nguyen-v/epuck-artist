@@ -36,6 +36,8 @@
 #define RAD2DEG 			180./M_PI
 #define DEG2RAD 			M_PI/180.
 #define COEFF 				0.5f
+#define NUMBER_COLORS		3
+
 
 // Those threshold values were chosen arbitrarily, more values should be tested if possible
 // After testing, I noticed that low resolution images have a LOT of noise remaining in the final image.
@@ -43,9 +45,13 @@
 
 #define HIGH_THRESHOLD 		0.2
 #define LOW_THRESHOLD 		0.1
+#define STRONG_PIXEL		255
+#define WEAK_PIXEL			100
+#define BACKGROUND			0
 
 // if the maximum of all pixels is under this value,
 // the picture is considered pitch black
+
 #define MIN_LUMINANCE 		50.0
 
 // color masks for RGB565 image format
@@ -53,6 +59,11 @@
 #define GREEN_MASK			0x7E0
 #define BLUE_MASK			0x1F
 #define RGB_MAX_VALUE	    255.0f
+
+// This threshold was chosen experimentaly and is used to recognize colours captured
+// in different light setups.
+#define LUMINANCE_THRESHOLD 1.1f
+
 
 
 
@@ -74,6 +85,9 @@ const int8_t Kx[] =	{ -1,  0,  1,
 const int8_t Ky[] = { 1,  2,   1,
 				   	   0,  0,  0,
 					  -1, -2, -1};
+
+const int8_t dx = 1;
+const int8_t dy = IM_LENGTH_PX;
 
 static uint8_t *img_buffer;
 static uint8_t *img_temp_buffer;
@@ -133,6 +147,33 @@ static float rgb_get_sat(float luma, uint8_t red, uint8_t green, uint8_t blue)
 	return c/(1-fabs(2*luma-1));
 }
 
+static uint8_t getColor(hsl_color hsl)
+{
+	if(hsl.lum >= LUMINANCE_THRESHOLD){
+		if((hsl.hue <= 50) && hsl.hue >= 260){
+			return red;
+		}
+		else if(hsl.hue > 135 && hsl.hue <= 180) {
+			return green;
+		}
+		else if(hsl.hue > 185 && hsl.hue < 230) {
+			return blue;
+		}
+	}
+	else {
+		if((hsl.hue <= 50) && hsl.hue >= 260){
+			return red;
+		}
+		else if(hsl.hue > 120 && hsl.hue <= 135) {
+			return green;
+		}
+		else if(hsl.hue > 80 && hsl.hue < 110) {
+			return blue;
+		}
+
+	}
+	return 0;
+}
 // IMPORTANT / MAGIC NUMBERS HAVE TO BE DEFINED //
 
 /**
@@ -143,7 +184,8 @@ static float rgb_get_sat(float luma, uint8_t red, uint8_t green, uint8_t blue)
  * 			Active pixels take the value of IM_MAX_VALUE and inactive pixels
  * 			take a value of 0.
  */
-static void canny_edge(void){
+static void canny_edge(void)
+{
 
 	// free position and color buffers
 	data_free();
@@ -151,11 +193,56 @@ static void canny_edge(void){
 
 	// image conversion from RGB to grayscale + saves the color for each pixel in a separate array
 	uint8_t red_px, blue_px, green_px = 0;
-	uint16_t low_threshold[3] = {0};
-	float average[3] ={0};
+	uint16_t low_threshold[NUMBER_COLORS] = {0};
+	float average[NUMBER_COLORS] ={0};
 	float hue_av = 0;
 	float sat_av = 0;
 	float lum_av = 0;
+	for(uint16_t i = 0; i < (IM_LENGTH_PX * IM_HEIGHT_PX)*2; i+=2){
+		uint16_t rgb565 = ((int16_t)img_buffer[i]  << 8) | img_buffer[i+1];
+		// extract color bits
+		red_px = (rgb565 & RED_MASK) >> 11;		// 0-31
+		green_px = (rgb565 & GREEN_MASK) >> 5;	// 0-63
+		blue_px = (rgb565 & BLUE_MASK);				// 0-31
+
+		// convert to range 0-255 for each color
+		red_px <<= 3;
+		green_px <<= 2;
+		blue_px <<= 3;
+
+		// convert to HSL color space
+//		hsl_color hsl;
+//		hsl.hue = rgb_get_hue(red_px, green_px, blue_px);
+//		hsl.lum = rgb_get_luma(red_px, green_px, blue_px);
+//		hsl.sat = rgb_get_sat(hsl.lum, red_px, green_px, blue_px);
+//
+//		hue_av += hsl.hue;
+//		sat_av += hsl.sat;
+//		lum_av += hsl.lum;
+
+		average[0] += red_px;
+		average[1] += green_px;
+		average[2] += blue_px;
+		}
+//		hue_av /= IM_LENGTH_PX*IM_HEIGHT_PX;
+//		sat_av /= IM_LENGTH_PX*IM_HEIGHT_PX;
+//		lum_av /= IM_LENGTH_PX*IM_HEIGHT_PX;
+
+
+		average[0] /= IM_LENGTH_PX*IM_HEIGHT_PX;
+		average[1] /= IM_LENGTH_PX*IM_HEIGHT_PX;
+		average[2] /= IM_LENGTH_PX*IM_HEIGHT_PX;
+
+		chprintf((BaseSequentialStream *)&SDU1, " av red %f\r\n", average[0]);
+		chprintf((BaseSequentialStream *)&SDU1, " av green %f\r\n", average[1]);
+		chprintf((BaseSequentialStream *)&SDU1, " av blue %f\r\n", average[2]);
+		chprintf((BaseSequentialStream *)&SDU1, " av hue %f\r\n", hue_av);
+		chprintf((BaseSequentialStream *)&SDU1, " av sat %f\r\n", sat_av);
+		chprintf((BaseSequentialStream *)&SDU1, " av lum %f\r\n\n", lum_av);
+
+	for(uint8_t i=0; i < 3; ++i)
+		low_threshold[i] = (uint16_t)(COEFF*average[i]);
+
 	for(uint16_t i = 0; i < (IM_LENGTH_PX * IM_HEIGHT_PX)*2; i+=2){
 		uint16_t rgb565 = ((int16_t)img_buffer[i]  << 8) | img_buffer[i+1];
 		// extract color bits
@@ -174,47 +261,23 @@ static void canny_edge(void){
 		hsl.lum = rgb_get_luma(red_px, green_px, blue_px);
 		hsl.sat = rgb_get_sat(hsl.lum, red_px, green_px, blue_px);
 
-		hue_av += hsl.hue;
-		sat_av += hsl.sat;
-		lum_av += hsl.lum;
-
-		average[0] += red_px;
-		average[1] += green_px;
-		average[2] += blue_px;
-		}
-		hue_av /= IM_LENGTH_PX*IM_HEIGHT_PX;
-		sat_av /= IM_LENGTH_PX*IM_HEIGHT_PX;
-		lum_av /= IM_LENGTH_PX*IM_HEIGHT_PX;
-
-
-		average[0] /= IM_LENGTH_PX*IM_HEIGHT_PX;
-		average[1] /= IM_LENGTH_PX*IM_HEIGHT_PX;
-		average[2] /= IM_LENGTH_PX*IM_HEIGHT_PX;
-
-		chprintf((BaseSequentialStream *)&SDU1, " av red %f\r\n", average[0]);
-		chprintf((BaseSequentialStream *)&SDU1, " av green %f\r\n", average[1]);
-		chprintf((BaseSequentialStream *)&SDU1, " av blue %f\r\n", average[2]);
-		chprintf((BaseSequentialStream *)&SDU1, " av hue %f\r\n", hue_av);
-		chprintf((BaseSequentialStream *)&SDU1, " av sat %f\r\n", sat_av);
-		chprintf((BaseSequentialStream *)&SDU1, " av lum %f\r\n\n", lum_av);
-	for(uint8_t i=0; i < 3; ++i)
-		low_threshold[i] = (uint16_t)(COEFF*average[i]);
-
-	for(uint16_t i = 0; i < (IM_LENGTH_PX * IM_HEIGHT_PX)*2; i+=2){
-
-		red_px = (uint8_t)img_buffer[i] & 0xF7;
-		green_px = (uint8_t)((img_buffer[i] & 0x07) || (img_buffer[i+1] & 0xe0));
-		blue_px = (uint8_t)img_buffer[i+1] & 0x1F;
-
-		if(red_px < low_threshold[0] && blue_px < low_threshold[1] && (uint8_t)green_px/2 < low_threshold[2])
+		if(red_px < low_threshold[0] && blue_px < low_threshold[1] && (uint8_t)green_px/2 < low_threshold[2]){
 			color[i/2] = black;
-		else if(red_px > blue_px && red_px > (uint8_t)green_px/2)
-			color[i/2]= red;
-		else if(blue_px > (uint8_t)green_px/2 && blue_px > red_px)
-			color[i/2] =blue;
-		else if((uint8_t) green_px/2 > red_px && (uint8_t) green_px/2 > red_px)
-			color[i/2] = green;
-
+		} else {
+		color[i/2] = getColor(hsl);
+		}
+//		red_px = (uint8_t)img_buffer[i] & 0xF7;
+//		green_px = (uint8_t)((img_buffer[i] & 0x07) || (img_buffer[i+1] & 0xe0));
+//		blue_px = (uint8_t)img_buffer[i+1] & 0x1F;
+//
+//		if(red_px < low_threshold[0] && blue_px < low_threshold[1] && (uint8_t)green_px/2 < low_threshold[2])
+//			color[i/2] = black;
+//		else if(red_px > blue_px && red_px > (uint8_t)green_px/2)
+//			color[i/2]= red;
+//		else if(blue_px > (uint8_t)green_px/2 && blue_px > red_px)
+//			color[i/2] =blue;
+//		else if((uint8_t) green_px/2 > red_px && (uint8_t) green_px/2 > red_px)
+//			color[i/2] = green;
 
 		img_buffer[i/2] = (0.2989 * (float)red_px) + (0.5870 * (float)green_px / 2.0) + (0.1140 * (float)blue_px);
 	}
@@ -235,8 +298,8 @@ static void canny_edge(void){
 			uint16_t k = 0;
 			for(int8_t x_ker = -XY_OFFSET_5x5; x_ker <= XY_OFFSET_5x5; ++x_ker){
 				for(int8_t y_ker = -XY_OFFSET_5x5; y_ker <= XY_OFFSET_5x5; ++y_ker){
-					conv += img_buffer[position + x_ker +(y_ker * IM_LENGTH_PX)]*Gaus5x5[k];
-//					__SMMLA(img_buffer[position + x_ker +(y_ker * IM_LENGTH_PX)],Gaus5x5[k],conv);
+				//	conv += img_buffer[position + x_ker +(y_ker * IM_LENGTH_PX)]*Gaus5x5[k];
+					conv = __SMMLA(img_buffer[position + x_ker +(y_ker * IM_LENGTH_PX)],Gaus5x5[k],conv);
 					++k;
 				}
 			}
@@ -262,10 +325,10 @@ static void canny_edge(void){
 			uint16_t k = 0;
 			for(int8_t x_ker = -XY_OFFSET_3x3; x_ker <= XY_OFFSET_3x3; ++x_ker){
 				for(int8_t y_ker = -XY_OFFSET_3x3; y_ker <= XY_OFFSET_3x3; ++y_ker){
-					Ix += img_temp_buffer[position + x_ker +(y_ker * IM_LENGTH_PX)]*Kx[k];
-					Iy += img_temp_buffer[position + x_ker +(y_ker * IM_LENGTH_PX)]*Ky[k];
-//					__SMMLA(img_temp_buffer[position + x_ker +(y_ker * IM_LENGTH_PX)],Kx[k],Ix, img_temp_buffer);
-//					__SMMLA(img_temp_buffer[position + x_ker +(y_ker * IM_LENGTH_PX)],Ky[k],Iy);
+					//Ix += img_temp_buffer[position + x_ker +(y_ker * IM_LENGTH_PX)]*Kx[k];
+					//Iy += img_temp_buffer[position + x_ker +(y_ker * IM_LENGTH_PX)]*Ky[k];
+					Ix = __SMMLA(img_temp_buffer[position + x_ker +(y_ker * IM_LENGTH_PX)],Kx[k],Ix);
+					Iy = __SMMLA(img_temp_buffer[position + x_ker +(y_ker * IM_LENGTH_PX)],Ky[k],Iy);
 					++k;
 				}
 			}
@@ -277,14 +340,14 @@ static void canny_edge(void){
 					max = I_mag[position];
 			}
 
-			theta = atan2((float)Ix , (float)Iy);
-			if((theta <= 22.5*DEG2RAD && theta >= -22.5*DEG2RAD) || (theta <= -157.5*DEG2RAD) || (theta >= 157.5*DEG2RAD)){
+			theta = atan2((float)Ix , (float)Iy)*RAD2DEG;
+			if((theta <= 22.5f && theta >= -22.5f) || (theta <= -157.5f) || (theta >= 157.5f)){
 				sobel_angle_state[position] = 0;
-			} else if((theta > 22.5*DEG2RAD && theta <= 67.5*DEG2RAD) || (theta <= -112.5*DEG2RAD && theta > -157.5*DEG2RAD)){
+			} else if((theta > 22.5f && theta <= 67.5f) || (theta <= -112.5f && theta > -157.5f)){
 				sobel_angle_state[position] = 1;
-			} else if((theta > 67.5*DEG2RAD && theta <= 112.5*DEG2RAD) || (theta <= -67.5*DEG2RAD && theta > -112.5*DEG2RAD)){
+			} else if((theta > 67.5f && theta <= 112.5f) || (theta < -67.5f && theta >= -112.5f)){
 				sobel_angle_state[position] = 2;
-			} else if((theta > 112.5*DEG2RAD && theta < 157.5*DEG2RAD) || (theta < -22.5*DEG2RAD && theta > -67.5*DEG2RAD)){
+			} else if((theta > 112.5f && theta < 157.5f) || (theta < -22.5f && theta >= -67.5f)){
 				sobel_angle_state[position] = 3;
 			}
 		}
@@ -301,27 +364,27 @@ static void canny_edge(void){
 			position = x + (y * IM_LENGTH_PX);
 			switch(sobel_angle_state[position]){
 				case 0:
-					i = I_mag[position - 1];
-					j = I_mag[position + 1];
+					i = I_mag[position - dx];
+					j = I_mag[position + dx];
 					break;
 				case 1:
-					i = I_mag[position - IM_LENGTH_PX + 1];
-					j = I_mag[position + IM_LENGTH_PX - 1];
+					i = I_mag[position - dy + dx];
+					j = I_mag[position + dy - dx];
 					break;
 				case 2:
-					i = I_mag[position - IM_LENGTH_PX ];
-					j = I_mag[position + IM_LENGTH_PX ];
+					i = I_mag[position - dy ];
+					j = I_mag[position + dy ];
 				break;
 				case 3:
-					i = I_mag[position - IM_LENGTH_PX - 1 ];
-					j = I_mag[position + IM_LENGTH_PX + 1];
+					i = I_mag[position - dy - dx];
+					j = I_mag[position + dy + dx];
 				break;
 			}
 			// multiplied by constant >1 for thicker lines
 			if((I_mag[position] >= i) && (I_mag[position] >= j))
 				img_buffer[position] = (uint8_t)I_mag[position];
 			else
-				img_buffer[position] = 0;
+				img_buffer[position] = BACKGROUND;
 		}
 	}
 
@@ -334,11 +397,11 @@ static void canny_edge(void){
 			for (uint8_t y = 0; y < IM_HEIGHT_PX; y++) {
 				position = x + (y * IM_LENGTH_PX);
 				if (img_buffer[position] > HIGH_THRESHOLD*max) {
-					img_temp_buffer[position] = 255;
+					img_temp_buffer[position] = STRONG_PIXEL;
 				} else if (img_buffer[position] > LOW_THRESHOLD*max) {
-					img_temp_buffer[position] = 100;
+					img_temp_buffer[position] = WEAK_PIXEL;
 				} else {
-					img_temp_buffer[position] = 0;
+					img_temp_buffer[position] = BACKGROUND;
 				}
 			}
 		}
@@ -349,18 +412,18 @@ static void canny_edge(void){
 		for (uint8_t x = 0; x < IM_LENGTH_PX; x++) {
 			for (uint8_t y = 0; y < IM_HEIGHT_PX; y++) {
 				position = x + (y * IM_LENGTH_PX);
-				if(img_temp_buffer[position] == 100){
-					if(img_temp_buffer[position-IM_LENGTH_PX-1] == 255|| img_temp_buffer[position-IM_LENGTH_PX] == 255 ||
-							img_temp_buffer[position-IM_LENGTH_PX+1] == 255 || img_temp_buffer[position-1] == 255 ||
-							img_temp_buffer[position+1] == 255 || img_temp_buffer[position+IM_LENGTH_PX-1] == 255 ||
-							img_temp_buffer[position+IM_LENGTH_PX] == 255 || img_temp_buffer[position+IM_LENGTH_PX+1] == 255)
-						img_buffer[position] = 255;
+				if(img_temp_buffer[position] == WEAK_PIXEL){
+					if(img_temp_buffer[position-dx-dy] == STRONG_PIXEL|| img_temp_buffer[position-dy] == STRONG_PIXEL ||
+							img_temp_buffer[position+dx-dy] == STRONG_PIXEL || img_temp_buffer[position-dx] == STRONG_PIXEL ||
+							img_temp_buffer[position+dx] == STRONG_PIXEL || img_temp_buffer[position-dx+dy] == STRONG_PIXEL ||
+							img_temp_buffer[position+dy] == STRONG_PIXEL || img_temp_buffer[position+dx+dy] == STRONG_PIXEL)
+						img_buffer[position] = STRONG_PIXEL;
 					else
-						img_buffer[position] = 0;
-				} else if(img_temp_buffer[position] == 255) {
-					img_buffer[position] = 255;
+						img_buffer[position] = BACKGROUND;
+				} else if(img_temp_buffer[position] == STRONG_PIXEL) {
+					img_buffer[position] = STRONG_PIXEL;
 				} else {
-					img_buffer[position] = 0;
+					img_buffer[position] = BACKGROUND;
 				}
 			}
 		}
@@ -368,7 +431,7 @@ static void canny_edge(void){
 		for (uint8_t x = 0; x < IM_LENGTH_PX; x++) {
 			for (uint8_t y = 0; y < IM_HEIGHT_PX; y++) {
 				position = x + (y * IM_LENGTH_PX);
-				img_buffer[position] = 0;
+				img_buffer[position] = BACKGROUND;
 			}
 		}
 	}
