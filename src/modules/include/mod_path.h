@@ -19,7 +19,6 @@ typedef struct edge_pos{
 
 typedef struct edge_track{
 	struct cartesian_coord pos;
-	uint8_t label;
 	uint8_t start_end;	//line = 0, edge = 1;
 	uint8_t color;
 } edge_track;
