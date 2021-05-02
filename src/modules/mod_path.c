@@ -148,7 +148,7 @@ static void pushback_edges(edge_pos* edges, uint16_t size, edge_pos new_edge){
  * @param[out]	edges			pointer to edges buffer
  * @return						none
  */
-static void path_tracing(uint8_t* img_buffer, edge_track *contours, edge_pos *edges, uint16_t *size_contours, uint16_t *size_edges)
+static void path_tracing(uint8_t* img_buffer, edge_track *contours, edge_pos *edges, uint16_t *size_contours, uint16_t *size_edges, uint8_t *color)
 {
 	// max has to be at IM_MAX_VALUE (because of output of canny_edge). Other values are chosen arbitrarily.
 	enum px_status {max = IM_MAX_VALUE, visited = IM_MAX_VALUE-1, rewind = IM_MAX_VALUE-2, begin = IM_MAX_VALUE-3};
@@ -283,6 +283,7 @@ static void path_tracing(uint8_t* img_buffer, edge_track *contours, edge_pos *ed
 						new_contour.pos.x = x_temp;
 						new_contour.pos.y = y_temp;
 						new_contour.start_end = 1;
+						new_contour.color = color[pos];
 
 						if(size_contours == 0)
 							contours[0] = new_contour;
@@ -411,6 +412,7 @@ static void path_tracing(uint8_t* img_buffer, edge_track *contours, edge_pos *ed
 					}
 					new_contour.pos.x = x_temp;
 					new_contour.pos.y = y_temp;
+					new_contour.color = color[pos];
 					pushback_contours(contours, *size_contours, new_contour);
 
 
@@ -660,8 +662,10 @@ static void img_resize(cartesian_coord* path, uint16_t canvas_size_x, uint16_t c
 
 void path_planning(void)
 {
-	// free previous position buffer
+	// free previous position and color buffer
 	data_free_pos();
+
+	uint8_t* color = data_get_color();
 
 	uint16_t size_edges = 0;
 	uint16_t size_contours = 0;
@@ -697,7 +701,7 @@ void path_planning(void)
 	edges = calloc(INIT_ARR, sizeof(edge_pos));
 
 	// fill contours and edge buffers and find their correct sizes
-	path_tracing(img_buffer, contours, edges, &size_contours, &size_edges);
+	path_tracing(img_buffer, contours, edges, &size_contours, &size_edges, color);
 
 	// realloc edges and contours to correct size
 //	contours = realloc(contours, size_contours*sizeof(edge_track));
@@ -716,13 +720,17 @@ void path_planning(void)
 	status = calloc(size_edges, sizeof(uint8_t*));
 	nearest_neighbour(size_edges);
 
-	// Allocate and fill final_path buffer
+	// Allocate and fill final_path and color buffers
 	uint16_t total_size = opt_contours_size + 1;
 	cartesian_coord* final_path = data_alloc_xy(total_size);
+	color = data_realloc_color(total_size);
+
 
 	cartesian_coord init_pos;
 	init_pos.x = INIT_ROBPOS_PX; init_pos.y = INIT_ROBPOS_PY;
 	final_path[0] = init_pos;
+	color[0] = 0;
+
 
 	chprintf((BaseSequentialStream *)&SDU1, " size_edges %d \r\n", size_edges);
 	chprintf((BaseSequentialStream *)&SDU1, " size_contours %d \r\n", size_contours);
@@ -730,19 +738,21 @@ void path_planning(void)
 	chprintf((BaseSequentialStream *)&SDU1, " opt_contours_size %d \r\n", total_size);
 
 
-	// Fill final_path buffer with optimized contour
+	// Fill final_path and color buffers with optimized contour and its corresponding colors.
 	uint16_t k = 1;
 	for (uint16_t i = 0; i < size_edges; i+=2) {
 		if(status[i] == start) {
 			for(uint16_t j = edges[i].index; j <= edges[i+1].index; ++j){
 				final_path[k].x = contours[j].pos.x;
 				final_path[k].y = contours[j].pos.y;
+				color[k] = contours[j].color;
 				++k;
 			}
 		} else if(status[i] == end) {
 			for(int16_t j = edges[i].index; j >= edges[i+1].index; --j){ //int16 because j is decremented to -1 for an index of 0
 				final_path[k].x = contours[j].pos.x;
 				final_path[k].y = contours[j].pos.y;
+				color[k] = contours[j].color;
 				++k;
 			}
 		}
