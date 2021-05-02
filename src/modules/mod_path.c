@@ -63,6 +63,8 @@
 #define INIT_ROBPOS_PX 50
 #define INIT_ROBPOS_PY 0
 
+#define INIT_ARR 1
+
 /** this dictates the maximum perpendicular distance in pixels between
  * approximated lines of optimized contour buffer and corresponding points of
  * the non optimized contour buffer.
@@ -84,13 +86,11 @@
 static edge_pos* edges;
 static edge_track* contours;
 
+
 static struct edge_track* res_out;
 static struct edge_track* new_contour;
 
 static uint8_t* status;
-
-static uint16_t size_contours = 0;
-static uint16_t size_edges = 0;
 
 /*===========================================================================*/
 /* Module local functions.                                                   */
@@ -110,13 +110,45 @@ static uint16_t position(uint8_t pos_x, uint8_t pos_y){
 
 
 /**
+ * @brief						increases the size of the contours buffer and saves a new entry in it
+ * @param[in] 	size			new size of the contour buffer
+ * @param[in] 	new_edge		new contours value to pushback
+ * @param[out] 	contours		pointer to contour buffer
+ * @return						none
+ */
+static void pushback_contours(edge_track* contours, uint16_t size, edge_track new_contour){
+
+	contours = realloc(contours, (size+1)*sizeof(edge_track));
+	contours[size] = new_contour;
+
+}
+
+
+/**
+ * @brief							Increases the size of the edges buffer and saves a new entry in it
+ * @param[in] 	size				new size of the edges buffer
+ * @param[in] 	new_edge			new edge value to pushback
+ * @param[out]	edges				pointer to edges buffer
+ * @return							none
+ */
+static void pushback_edges(edge_pos* edges, uint16_t size, edge_pos new_edge){
+
+	edges = realloc(edges, (size+1)*sizeof(edge_pos));
+	edges[size] = new_edge;
+
+}
+
+
+
+
+/**
  * @brief						fills contours and edges buffer with active pixels
  * @param[in]	img_buffer		pointer to image buffer
  * @param[out]	contours		pointer to contour buffer
  * @param[out]	edges			pointer to edges buffer
  * @return						none
  */
-static void path_tracing(uint8_t* img_buffer, edge_track *contours, edge_pos *edges)
+static void path_tracing(uint8_t* img_buffer, edge_track *contours, edge_pos *edges, uint16_t *size_contours, uint16_t *size_edges)
 {
 	// max has to be at IM_MAX_VALUE (because of output of canny_edge). Other values are chosen arbitrarily.
 	enum px_status {max = IM_MAX_VALUE, visited = IM_MAX_VALUE-1, rewind = IM_MAX_VALUE-2, begin = IM_MAX_VALUE-3};
@@ -126,6 +158,9 @@ static void path_tracing(uint8_t* img_buffer, edge_track *contours, edge_pos *ed
 	bool extremity_found = false;
 
 	uint16_t edge_index = 0;
+
+	edge_pos new_edge;
+	edge_track new_contour;
 
 	uint16_t x_temp = 1;
 	uint16_t y_temp = 1;
@@ -235,13 +270,25 @@ static void path_tracing(uint8_t* img_buffer, edge_track *contours, edge_pos *ed
 					else {
 						extremity_found = true;
 
-						edges[edge_index].pos.x = x_temp;
-						edges[edge_index].pos.y = y_temp;
-						edges[edge_index].index = size_contours;
+						new_edge.pos.x = x_temp;
+						new_edge.pos.y = y_temp;
+						new_edge.index = *size_contours;
 
-						contours[size_contours].pos.x = x_temp;
-						contours[size_contours].pos.y = y_temp;
-						contours[size_contours].start_end = 1;
+						if(edge_index == 0)
+							edges[0] = new_edge;
+						else
+							pushback_edges(edges, edge_index, new_edge);
+
+
+						new_contour.pos.x = x_temp;
+						new_contour.pos.y = y_temp;
+						new_contour.start_end = 1;
+
+						if(size_contours == 0)
+							contours[0] = new_contour;
+						else
+							pushback_contours(contours, *size_contours, new_contour);
+
 
 						++edge_index;
 					}
@@ -301,67 +348,70 @@ static void path_tracing(uint8_t* img_buffer, edge_track *contours, edge_pos *ed
 					// size_contours-1 != edges[edge_index-1].index) handles this condition
 
 					else if(img_buffer[pos+dx]==max || (img_buffer[pos+dx]==begin
-							&& size_contours-1 != edges[edge_index-1].index)) {
+							&& *size_contours-1 != edges[edge_index-1].index)) {
 						pos += dx;
 						++x_temp;
 					}
 					// left
 					else if(img_buffer[pos-dx]==max || (img_buffer[pos-dx]==begin
-							&& size_contours-1 != edges[edge_index-1].index)) {
+							&& *size_contours-1 != edges[edge_index-1].index)) {
 						pos -= dx;
 						--x_temp;
 					}
 					// bottom
 					else if(img_buffer[pos+dy]==max || (img_buffer[pos+dy]==begin
-							&& size_contours-1 != edges[edge_index-1].index)) {
+							&& *size_contours-1 != edges[edge_index-1].index)) {
 						pos += dy;
 						++y_temp;
 					}
 					// top
 					else if(img_buffer[pos-dy]==max || (img_buffer[pos-dy]==begin
-							&& size_contours-1 != edges[edge_index-1].index)) {
+							&& *size_contours-1 != edges[edge_index-1].index)) {
 						pos -= dy;
 						--y_temp;
 					}
 					// bottom right
 					else if(img_buffer[pos+dx+dy]==max || (img_buffer[pos+dx+dy]==begin
-							&& size_contours-1 != edges[edge_index-1].index)) {
+							&& *size_contours-1 != edges[edge_index-1].index)) {
 						pos += (dx+dy);
 						++x_temp; ++y_temp;
 					}
 					// bottom left
 					else if(img_buffer[pos-dx+dy]==max || (img_buffer[pos-dx+dy]==begin
-							&& size_contours-1 != edges[edge_index-1].index)) {
+							&& *size_contours-1 != edges[edge_index-1].index)) {
 						pos -= (dx-dy);
 						--x_temp; ++y_temp;
 					}
 					// top right
 					else if(img_buffer[pos+dx-dy]==max || (img_buffer[pos+dx-dy]==begin
-							&& size_contours-1 != edges[edge_index-1].index)) {
+							&& *size_contours-1 != edges[edge_index-1].index)) {
 						pos += (dx-dy);
 						++x_temp; --y_temp;
 					}
 					// top left
 					else if(img_buffer[pos-dx-dy]==max || (img_buffer[pos-dx-dy]==begin
-							&& size_contours-1 != edges[edge_index-1].index)) {
+							&& *size_contours-1 != edges[edge_index-1].index)) {
 						pos -= (dx+dy);
 						--x_temp; --y_temp;
 					}
 					else {
 						extremity_found = true;
-						edges[edge_index].pos.x = x_temp;
-						edges[edge_index].pos.y = y_temp;
-						edges[edge_index].index = size_contours;
-						contours[size_contours].start_end = 1;
+						new_edge.pos.x = x_temp;
+						new_edge.pos.y = y_temp;
+						new_edge.index = *size_contours;
+						new_contour.start_end = 1;
+						pushback_edges(edges, edge_index, new_edge);
+
 						++edge_index;
 					}
 					img_buffer[pos] = rewind;
 					if(!extremity_found) {
-						++size_contours;
-						contours[size_contours].start_end = 0;
+						++(*size_contours);
+						new_contour.start_end = 0;
 					}
-					contours[size_contours].pos.x = x_temp;
-					contours[size_contours].pos.y = y_temp;
+					new_contour.pos.x = x_temp;
+					new_contour.pos.y = y_temp;
+					pushback_contours(contours, *size_contours, new_contour);
 
 
 				}
@@ -369,8 +419,10 @@ static void path_tracing(uint8_t* img_buffer, edge_track *contours, edge_pos *ed
 			}
 		}
 	}
-	size_edges = edge_index;
+	*size_edges = edge_index;
 }
+
+
 
 
 /**
@@ -379,7 +431,7 @@ static void path_tracing(uint8_t* img_buffer, edge_track *contours, edge_pos *ed
  * @param[out]	opt_contour		pointer to buffer containing one optimized contour
  * @return						length of buffer containing one optimized contour (opt_contour)
  */
-static uint16_t path_optimization(edge_track *contour, uint16_t size, edge_track* opt_contour, uint16_t opt_contour_len){
+static uint16_t contour_optimization(edge_track *contour, uint16_t size, edge_track* opt_contour, uint16_t opt_contour_len){
 
 
 	uint16_t index = 0;
@@ -403,14 +455,14 @@ static uint16_t path_optimization(edge_track *contour, uint16_t size, edge_track
 
 	if(dmax > MAX_PERP_DIST){
 		// Recursive call
-		uint16_t n1 = path_optimization(contour, index + 1, opt_contour, opt_contour_len);
+		uint16_t n1 = contour_optimization(contour, index + 1, opt_contour, opt_contour_len);
 		if (opt_contour_len >= n1 - 1){
 			opt_contour_len -= n1 - 1;
 			opt_contour += n1 - 1;
 		} else {
 			opt_contour_len = 0;
 		}
-		uint16_t n2 = path_optimization(contour + index, size-index, opt_contour, opt_contour_len);
+		uint16_t n2 = contour_optimization(contour + index, size-index, opt_contour, opt_contour_len);
 		return n1 + n2 - 1;
 
 	} else if(dmax == 0) {
@@ -434,13 +486,70 @@ static uint16_t path_optimization(edge_track *contour, uint16_t size, edge_track
 }
 
 
+/**
+ * @brief							Samples all contours from the contours buffer and optimizes their path one by one
+ * @param[in] 	contours			pointer to contour buffer
+ * @param[in]	edges				pointer to edges buffer
+ * @return		opt_contours_size	length of buffer containing all contours
+ */
+static uint16_t path_optimization(edge_track* contours, edge_pos* edges, uint16_t size_edges){
+
+	uint16_t opt_contours_size = 0;
+	uint16_t contours_size = 0;
+	for(uint8_t i = 0; i < (size_edges)/2; ++i){
+		uint16_t start_index = edges[i*2].index;
+		uint16_t end_index = edges[i*2+1].index;
+		uint8_t loop = 0;
+
+		if(start_index == end_index){
+			contours[opt_contours_size] = contours[contours_size];
+			++opt_contours_size;
+			++contours_size;
+		} else {
+			uint16_t length = end_index - start_index + 1;
+			if(contours[start_index].pos.x == contours[end_index].pos.x && contours[start_index].pos.y == contours[end_index].pos.y){
+				--length;
+				++loop;
+			}
+
+			uint16_t k = 0;
+			res_out = malloc(length*sizeof(struct edge_track));
+			new_contour = malloc(length*sizeof(struct edge_track));
+			for(uint16_t n = 0; n < length; ++n){
+				new_contour[n] = contours[contours_size + n];
+			}
+
+			contours_size += length;
+			uint16_t final_size = contour_optimization(new_contour,length, res_out,length);
+
+			for(uint16_t j = opt_contours_size; j < opt_contours_size + final_size; ++j){
+				contours[j] = res_out[k];
+				++k;
+			}
+
+			opt_contours_size += final_size;
+			if(loop){
+				contours[opt_contours_size] = contours[start_index];
+				++opt_contours_size;
+				++contours_size;
+			}
+			free(new_contour);
+			free(res_out);
+		}
+	}
+	return opt_contours_size;
+}
+
+
+
+
 
 /**
  * @brief						reorders edges indexes to match optimized contour buffer indexes
  * @param[in] opt_contours_size size (length) of optimized contours buffer
  * @return						none
  */
-static void reorder_edges_index(uint16_t opt_contours_size)
+static void reorder_edges_index(uint16_t opt_contours_size, uint16_t size_edges)
 {
 	uint16_t k = 0;
 //		edges[size_edges - 1].index = total_size - 1;
@@ -462,7 +571,7 @@ static void reorder_edges_index(uint16_t opt_contours_size)
  * @brief						reorders edges buffer to minimize travel distance
  * @return						none
  */
-static void nearest_neighbour(void){
+static void nearest_neighbour(uint16_t size_edges){
 
 	uint16_t min_index = 0;
 	float min_distance = IM_HEIGHT_PX+IM_LENGTH_PX;
@@ -554,8 +663,8 @@ void path_planning(void)
 	// free previous position buffer
 	data_free_pos();
 
-	size_edges = 0;
-	size_contours = 0;
+	uint16_t size_edges = 0;
+	uint16_t size_contours = 0;
 
 	// get img_buffer containing result from canny edge detection algorithm
 	uint8_t* img_buffer = get_img_buffer();
@@ -575,7 +684,6 @@ void path_planning(void)
 
 	if(nb_pixels == 0)
 		return;
-
 	/**
 	 * allocate contours and edges with temporary size for edges
 	 * in accordance with the line_tracing algorithm, the "worst case scenario" is
@@ -584,70 +692,29 @@ void path_planning(void)
 	 * Thus, we need to allocate 4 slots per 3 pixels to be safe.
 	 */
 
-	contours = calloc(nb_pixels*4/3, sizeof(edge_track));
-	edges = calloc(nb_pixels*4/3, sizeof(edge_pos));
+
+	contours = calloc(INIT_ARR, sizeof(edge_track));
+	edges = calloc(INIT_ARR, sizeof(edge_pos));
 
 	// fill contours and edge buffers and find their correct sizes
-	path_tracing(img_buffer, contours, edges);
+	path_tracing(img_buffer, contours, edges, &size_contours, &size_edges);
 
 	// realloc edges and contours to correct size
-	contours = realloc(contours, size_contours*sizeof(edge_track));
-	edges = realloc(edges, size_edges*sizeof(edge_pos));
+//	contours = realloc(contours, size_contours*sizeof(edge_track));
+//	edges = realloc(edges, size_edges*sizeof(edge_pos));
 
 	// optimize contour by deleting redudant positions in coutours buffer
-	uint16_t opt_contours_size = 0;
-	uint16_t contours_size = 0;
-	for(uint8_t i = 0; i < (size_edges)/2; ++i){
-		uint16_t start_index = edges[i*2].index;
-		uint16_t end_index = edges[i*2+1].index;
-		uint8_t loop = 0;
-
-		if(start_index == end_index){
-			contours[opt_contours_size] = contours[contours_size];
-			++opt_contours_size;
-			++contours_size;
-		} else {
-			uint16_t length = end_index - start_index + 1;
-			if(contours[start_index].pos.x == contours[end_index].pos.x && contours[start_index].pos.y == contours[end_index].pos.y){
-				--length;
-				++loop;
-			}
-
-			uint16_t k = 0;
-			res_out = malloc(length*sizeof(struct edge_track));
-			new_contour = malloc(length*sizeof(struct edge_track));
-			for(uint16_t n = 0; n < length; ++n){
-				new_contour[n] = contours[contours_size + n];
-			}
-
-			contours_size += length;
-			uint16_t final_size = path_optimization(new_contour,length, res_out,length);
-
-			for(uint16_t j = opt_contours_size; j < opt_contours_size + final_size; ++j){
-				contours[j] = res_out[k];
-				++k;
-			}
-
-			opt_contours_size += final_size;
-			if(loop){
-				contours[opt_contours_size] = contours[start_index];
-				++opt_contours_size;
-				++contours_size;
-			}
-			free(new_contour);
-			free(res_out);
-		}
-	}
+	uint16_t opt_contours_size = path_optimization(contours,edges, size_edges);
 
 	// reallocate contour with new size
 	contours = realloc(contours, opt_contours_size*sizeof(edge_track));
 
 	// reorder edges buffer indexes to match optimized contour
-	reorder_edges_index(opt_contours_size);
+	reorder_edges_index(opt_contours_size, size_edges);
 
 	// reorder the edges to minimize travel distance
 	status = calloc(size_edges, sizeof(uint8_t*));
-	nearest_neighbour();
+	nearest_neighbour(size_edges);
 
 	// Allocate and fill final_path buffer
 	uint16_t total_size = opt_contours_size + 1;
@@ -690,10 +757,6 @@ void path_planning(void)
 	free(contours);
 	free(edges);
 }
-
-
-
-
 
 
 
