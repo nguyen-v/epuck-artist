@@ -25,6 +25,7 @@
 /*===========================================================================*/
 
 #define SERIAL_BIT_RATE			115200
+#define MAX_BUFFER_SIZE			4000
 
 /*===========================================================================*/
 /* Module local variables.                                                   */
@@ -121,7 +122,7 @@ uint8_t com_receive_length(BaseSequentialStream* in)
 					state = 0;
 		}
 	}
-	chprintf((BaseSequentialStream *)&SDU1, "Length detected \r \n");
+//	chprintf((BaseSequentialStream *)&SDU1, "Length detected \r \n");
 	return c = chSequentialStreamGet(in); // parses length
 }
 
@@ -165,7 +166,7 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 		}
 	}
 
-	chprintf((BaseSequentialStream *)&SDU1, "Data detected \r \n");
+//	chprintf((BaseSequentialStream *)&SDU1, "Data detected \r \n");
 
 	// reset data information and free buffers
 	data_free();
@@ -217,5 +218,78 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 }
 
 
+void com_send_data(BaseSequentialStream* out, uint8_t* data, uint16_t size, message_type msg_type)
+{
+	// send start message
+	chSequentialStreamWrite(out, (uint8_t*)"START\r", 6);
+
+	// send message type
+	switch(msg_type) {
+		case MSG_COLOR:
+			chprintf(out, "color");
+			break;
+		case MSG_IMAGE_RGB:
+			chprintf(out, "rgb");
+			break;
+		case MSG_IMAGE_GRAYSCALE:
+			chprintf(out, "grayscale");
+			break;
+		case MSG_IMAGE_GAUSS:
+			chprintf(out, "gauss");
+			break;
+		case MSG_IMAGE_SOBEL:
+			chprintf(out, "sobel");
+			break;
+		case MSG_IMAGE_CANNY:
+			chprintf(out, "canny");
+			break;
+		case MSG_IMAGE_PATH:
+			chprintf(out, "path");
+			break;
+	}
+	chprintf(out, "\n");
+
+	// send message length
+	chSequentialStreamWrite(out, (uint8_t*)&size, sizeof(uint16_t));
+
+	// send message body
+
+	/** @note: 	buffer has a maximum size of around 4000-4500, which is why we send
+	  * 		it in packets of MAX_BUFFER_SIZE
+	  */
+
+	uint16_t length = size;
+	if (size > MAX_BUFFER_SIZE) {
+		while (length > MAX_BUFFER_SIZE) {
+			chSequentialStreamWrite(out, (uint8_t*)data, sizeof(uint8_t) * MAX_BUFFER_SIZE);
+			length -= MAX_BUFFER_SIZE;
+		}
+	} else {
+		chSequentialStreamWrite(out, (uint8_t*)data, sizeof(uint8_t) * length);
+	}
+}
+
+void com_request_color(uint8_t col)
+{
+	uint8_t color = white;
+	switch(col) {
+		case white:
+			color = 'W';
+			break;
+		case black:
+			color = 'D';
+			break;
+		case red:
+			color = 'R';
+			break;
+		case blue:
+			color = 'B';
+			break;
+		case green:
+			color = 'G';
+			break;
+	}
+	com_send_data((BaseSequentialStream *)&SD3, &color, 1, MSG_COLOR);
+}
 
 

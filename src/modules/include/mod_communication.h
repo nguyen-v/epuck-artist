@@ -11,6 +11,19 @@
 /*===========================================================================*/
 
 //extern mutex_t serial_mtx;
+/*===========================================================================*/
+/* Module data structures and types.                                         */
+/*===========================================================================*/
+
+typedef enum message_type {
+	MSG_COLOR,
+	MSG_IMAGE_RGB,
+	MSG_IMAGE_GRAYSCALE,
+	MSG_IMAGE_GAUSS,
+	MSG_IMAGE_SOBEL,
+	MSG_IMAGE_CANNY,
+	MSG_IMAGE_PATH
+} message_type;
 
 /*===========================================================================*/
 /* External declarations.                                                    */
@@ -56,5 +69,10 @@ uint8_t com_receive_length(BaseSequentialStream* in);
  * @return				Length of the position buffer.
  */
 uint16_t com_receive_data(BaseSequentialStream* in);
+
+
+void com_send_data(BaseSequentialStream* out, uint8_t* data, uint16_t size, message_type msg_type);
+
+void com_request_color(uint8_t col);
 
 #endif
