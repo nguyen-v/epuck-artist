@@ -23,6 +23,7 @@
 // Module headers
 
 #include <mod_draw.h>
+#include <mod_communication.h>
 #include <mod_data.h>
 #include <def_epuck_field.h>
 
@@ -103,23 +104,28 @@ static THD_FUNCTION(thd_draw, arg)
 	uint16_t length = data_get_length();
 	cartesian_coord* pos = data_get_pos();
 	uint8_t* color = data_get_color();
-//	uint8_t current_color = color[0];
-//	uint8_t prev_color = 0;
+	uint8_t prev_color = white;
 
-	chprintf((BaseSequentialStream *)&SDU1, "thread created \r \n");
-	chprintf((BaseSequentialStream *)&SDU1, "length= %d \r \n", length);
+//	chprintf((BaseSequentialStream *)&SDU1, "thread created \r \n");
+//	chprintf((BaseSequentialStream *)&SDU1, "length= %d \r \n", length);
 	for(i = 0; i<length && !chThdShouldTerminateX(); ++i) {
 
+		if (color[i] != prev_color) {
+			com_request_color(color[i]);
+			prev_color = color[i];
+			draw_pause_thd();
+		}
 		chSysLock();
 		if (is_paused) {
 		  chSchGoSleepS(CH_STATE_SUSPENDED);
 		}
 		chSysUnlock();
 
-		chprintf((BaseSequentialStream *)&SD3, "COL \r \n");
+//		chprintf((BaseSequentialStream *)&SD3, "COL \r \n");
 
 		draw_move(pos[i].x, pos[i].y);
-		chprintf((BaseSequentialStream *)&SDU1, "loop n %d \r \n", i);
+
+//		chprintf((BaseSequentialStream *)&SDU1, "loop n %d \r \n", i);
 //		chBSemWait(&move_finished_sem);
 	}
 	is_drawing = false;
@@ -170,11 +176,11 @@ void draw_set_init_length(float y_length)
 {
 	y0_st = CM_TO_STEP*y_length;
 	len0_st = sqrt(x0_st*x0_st + y0_st*y0_st);
-	chprintf((BaseSequentialStream *)&SDU1, "x0_st = %d \r \n",x0_st);
-	chprintf((BaseSequentialStream *)&SDU1, "y0_st = %d \r \n",y0_st);
-	chprintf((BaseSequentialStream *)&SDU1, "len0_st = %d \r \n",len0_st);
-	chprintf((BaseSequentialStream *)&SDU1, "len0_CM = %f \r \n",len0_st/CM_TO_STEP);
-	chprintf((BaseSequentialStream *)&SDU1, "x0_CM = %f \r \n",x0_st/CM_TO_STEP);
+//	chprintf((BaseSequentialStream *)&SDU1, "x0_st = %d \r \n",x0_st);
+//	chprintf((BaseSequentialStream *)&SDU1, "y0_st = %d \r \n",y0_st);
+//	chprintf((BaseSequentialStream *)&SDU1, "len0_st = %d \r \n",len0_st);
+//	chprintf((BaseSequentialStream *)&SDU1, "len0_CM = %f \r \n",len0_st/CM_TO_STEP);
+//	chprintf((BaseSequentialStream *)&SDU1, "x0_CM = %f \r \n",x0_st/CM_TO_STEP);
 }
 
 void draw_reset(void)
@@ -247,8 +253,8 @@ void draw_move(uint16_t x, uint16_t y)
 	uint16_t len_l_current = len0_st - right_motor_get_pos();
 	uint16_t len_r_current = len0_st - left_motor_get_pos();
 
-	chprintf((BaseSequentialStream *)&SDU1, "len_l_current = %d \r \n",len_l_current);
-	chprintf((BaseSequentialStream *)&SDU1, "len_r_current = %d \r \n",len_r_current);
+//	chprintf((BaseSequentialStream *)&SDU1, "len_l_current = %d \r \n",len_l_current);
+//	chprintf((BaseSequentialStream *)&SDU1, "len_r_current = %d \r \n",len_r_current);
 //	chprintf((BaseSequentialStream *)&SDU1, "spool perim cm = %f \r \n",SPOOL_PERIMETER);
 //	chprintf((BaseSequentialStream *)&SDU1, "CMTOSTEP = %f \r \n",CM_TO_STEP);
 //	chprintf((BaseSequentialStream *)&SDU1, "CARTTOST = %f \r \n",CART_TO_ST);
@@ -267,15 +273,15 @@ void draw_move(uint16_t x, uint16_t y)
 //	chprintf((BaseSequentialStream *)&SDU1, "y_st = %d \r \n", y_st);
 //	chprintf((BaseSequentialStream *)&SDU1, "x_r_st = %d \r \n", x_r_st);
 //	chprintf((BaseSequentialStream *)&SDU1, "x_l_st = %d \r \n", x_l_st);
-	chprintf((BaseSequentialStream *)&SDU1, "YCM %f \r \n", y*CART_TO_ST/CM_TO_STEP);
+//	chprintf((BaseSequentialStream *)&SDU1, "YCM %f \r \n", y*CART_TO_ST/CM_TO_STEP);
 	// calculate next length
 	uint16_t len_l = sqrt(x_l_st*x_l_st + y_st*y_st);
 	uint16_t len_r = sqrt(x_r_st*x_r_st + y_st*y_st);
-	chprintf((BaseSequentialStream *)&SDU1, "len_l_CM = %f \r \n",len_l/CM_TO_STEP);
-	chprintf((BaseSequentialStream *)&SDU1, "len_r_CM = %f \r \n",len_r/CM_TO_STEP);
-	chprintf((BaseSequentialStream *)&SDU1, "xl_CM = %f \r \n",x_l_st/CM_TO_STEP);
-	chprintf((BaseSequentialStream *)&SDU1, "xr_CM = %f \r \n",x_r_st/CM_TO_STEP);
-	chprintf((BaseSequentialStream *)&SDU1, "yabs_cm = %f \r \n",y_st/CM_TO_STEP);
+//	chprintf((BaseSequentialStream *)&SDU1, "len_l_CM = %f \r \n",len_l/CM_TO_STEP);
+//	chprintf((BaseSequentialStream *)&SDU1, "len_r_CM = %f \r \n",len_r/CM_TO_STEP);
+//	chprintf((BaseSequentialStream *)&SDU1, "xl_CM = %f \r \n",x_l_st/CM_TO_STEP);
+//	chprintf((BaseSequentialStream *)&SDU1, "xr_CM = %f \r \n",x_r_st/CM_TO_STEP);
+//	chprintf((BaseSequentialStream *)&SDU1, "yabs_cm = %f \r \n",y_st/CM_TO_STEP);
 
 	// move until next length
 	while (abs(len_l-len_l_current)>STEP_THRESHOLD || abs(len_r-len_r_current)>STEP_THRESHOLD) {
