@@ -82,7 +82,7 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 
 		if(state == 0 && distance_min <= current_dist && distance_max >= current_dist) {
 			state = 1;
-			chprintf((BaseSequentialStream *)&SDU1, "STATE1 %d \r \n", current_dist);
+//			chprintf((BaseSequentialStream *)&SDU1, "STATE1 %d \r \n", current_dist);
 			prev_dist = current_dist;
 			palClearPad(GPIOD, GPIOD_LED1);
 			chThdSleepMilliseconds(time_interval);
@@ -92,7 +92,7 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 		}
 		if(state == 1 && abs((int16_t)current_dist - (int16_t)prev_dist) <= distance_threshold) {
 			state = 2;
-			chprintf((BaseSequentialStream *)&SDU1, "STATE2 %d \r \n", current_dist);
+//			chprintf((BaseSequentialStream *)&SDU1, "STATE2 %d \r \n", current_dist);
 			prev_dist = current_dist;
 			palClearPad(GPIOD, GPIOD_LED3);
 			chThdSleepMilliseconds(time_interval);
@@ -102,7 +102,7 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 		}
 		if(state == 2 && abs((int16_t)current_dist - (int16_t)prev_dist) <= distance_threshold) {
 			state = 3;
-			chprintf((BaseSequentialStream *)&SDU1, "STATE3 %d \r \n", current_dist);
+//			chprintf((BaseSequentialStream *)&SDU1, "STATE3 %d \r \n", current_dist);
 			prev_dist = current_dist;
 			palClearPad(GPIOD, GPIOD_LED5);
 			chThdSleepMilliseconds(time_interval);
@@ -112,7 +112,7 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 		}
 		if(state == 3 && abs((int16_t)current_dist - (int16_t)prev_dist) <= distance_threshold) {
 			state = 4;
-			chprintf((BaseSequentialStream *)&SDU1, "STATE4 %d \r \n", current_dist);
+//			chprintf((BaseSequentialStream *)&SDU1, "STATE4 %d \r \n", current_dist);
 			prev_dist = current_dist;
 			palClearPad(GPIOD, GPIOD_LED7);
 			chThdSleepMilliseconds(time_interval);

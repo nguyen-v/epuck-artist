@@ -78,14 +78,14 @@ static int16_t get_speed_p(int16_t goal_distance, int16_t init_distance)
 	int16_t error = 0;
 	int16_t distance = init_distance - sensors_tof_kalman();
 	error = distance - goal_distance;
-	chprintf((BaseSequentialStream *)&SDU1, "error %d \r \n", error);
+//	chprintf((BaseSequentialStream *)&SDU1, "error %d \r \n", error);
 	// epuck doesn't move if distance too high or goal distance reached
 	if (error < -TOF_DISTANCE_MAX)
 		return 0;
 
 	if (abs(error) < TOF_PRECISION_THRESHOLD) {
 		reached_goal_distance = true;
-		chprintf((BaseSequentialStream *)&SDU1, "REACHED \r \n");
+//		chprintf((BaseSequentialStream *)&SDU1, "REACHED \r \n");
 		return 0;
 	}
 
@@ -107,9 +107,9 @@ static int16_t move_home(void)
 	if (abs(error) < TOF_PRECISION_THRESHOLD*MM_TO_STEP) {
 		reached_home = true;
 	}
-	chprintf((BaseSequentialStream *)&SDU1, "error %d \r \n", error);
+//	chprintf((BaseSequentialStream *)&SDU1, "error %d \r \n", error);
 	speed = KP/MM_TO_STEP * error;
-	chprintf((BaseSequentialStream *)&SDU1, "SPEED %f \r \n", speed);
+//	chprintf((BaseSequentialStream *)&SDU1, "SPEED %f \r \n", speed);
 	// define lower and upped bounds for the speed returned
 	if(speed > CALIBRATION_SPEED)
 		speed = CALIBRATION_SPEED;
@@ -120,12 +120,12 @@ static int16_t move_home(void)
 
 static void set_init_length(uint16_t true_diff_length, uint16_t expected_diff_length)
 {
-	chprintf((BaseSequentialStream *)&SDU1, "true diff %d \r \n", true_diff_length);
-	chprintf((BaseSequentialStream *)&SDU1, "exp diff %d \r \n", expected_diff_length);
+//	chprintf((BaseSequentialStream *)&SDU1, "true diff %d \r \n", true_diff_length);
+//	chprintf((BaseSequentialStream *)&SDU1, "exp diff %d \r \n", expected_diff_length);
 	float diff_length_ratio = (float)true_diff_length/expected_diff_length;
 	float corrected_length = (diff_length_ratio * LENGTH_DIST_SLOPE + LENGTH_DIST_INTERCEPT)*CORRECTION_FACTOR;
 	draw_set_init_length(corrected_length*CORRECTION_FACTOR);
-	chprintf((BaseSequentialStream *)&SDU1, "corrected length %f \r \n", corrected_length);
+//	chprintf((BaseSequentialStream *)&SDU1, "corrected length %f \r \n", corrected_length);
 }
 
 /*===========================================================================*/
@@ -173,7 +173,7 @@ static THD_FUNCTION(thd_calibrate, arg)
 	thread_t *tp = chMsgWait();
 	msg_t goal_distance = chMsgGet(tp); //TODO HANDLE RESET ON THIS WAIT
 	chMsgRelease(tp, MSG_OK);
-	chprintf((BaseSequentialStream *)&SDU1, "goal dist %d \r \n", goal_distance);
+//	chprintf((BaseSequentialStream *)&SDU1, "goal dist %d \r \n", goal_distance);
 
 	// turn off front led
 	palClearPad(GPIOD, GPIOD_LED_FRONT);
@@ -241,7 +241,7 @@ void cal_set_goal_distance(void)
 {
 	if (is_calibrating) {
 		uint8_t goal_distance = com_receive_length((BaseSequentialStream *)&SD3);
-		chprintf((BaseSequentialStream *)&SDU1, "goal dist %d \r \n", goal_distance);
+//		chprintf((BaseSequentialStream *)&SDU1, "goal dist %d \r \n", goal_distance);
 		(void)chMsgSend(ptr_calibrate, (msg_t)goal_distance);
 	}
 }

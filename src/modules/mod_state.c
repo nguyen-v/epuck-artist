@@ -65,8 +65,6 @@ static thread_t* ptr_process_cmd;
  */
 static void process_command(uint8_t cmd)
 {
-	static uint8_t* color;
-	static float height;
 	switch(cmd) {
 		case CMD_RESET:
 //			palClearPad(GPIOD, GPIOD_LED1);
@@ -117,7 +115,7 @@ static void process_command(uint8_t cmd)
 			cal_set_goal_distance();
 			break;
 		default:
-			chprintf((BaseSequentialStream *)&SDU1, "Invalid command");
+//			chprintf((BaseSequentialStream *)&SDU1, "Invalid command");
 			break;
 	}
 }
