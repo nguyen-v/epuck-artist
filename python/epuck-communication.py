@@ -8,7 +8,7 @@ import serial
 import time
 import numpy as np
 import struct
-from threading import Thread
+import threading
 
 from PIL import Image # read image
 
@@ -19,6 +19,8 @@ from PIL import Image # read image
 # Serial 
 SERIAL_PORT_DEFAULT         = "COM8"  
 SERIAL_BAUD_RATE            = 115200
+BT_BAUD_RATE                = 9600
+MAX_BUFFER_LENGTH           = 4000
 
 # Error, timeout
 TIMEOUT_PERIOD              = 1
@@ -27,6 +29,10 @@ ERROR_COUNT_MAX             = 10
 # Periods
 READ_PERIOD                 = 0.1
 WRITE_PERIOD                = 0.1
+
+# Messages
+CONFIRMATION_MSG             = 'Ready'
+
 
 # Commands
 COMMANDS = (
@@ -75,45 +81,83 @@ SECOND_ARG_LIMIT = [0 for x in range(2) for y in range(len(COMMANDS_TWO_ARGS))]
 # assign lower and upper bounds
 SECOND_ARG_LIMIT[CMD_TWO_ARGS_INDEX['V']] = [0, 150] # in mm
 
-# ===========================================================================
-#  Threads.                                                         
-# ===========================================================================
+def receive_data(ser_epuck, ser_arduino):
+    while True:
+        # state machine for proper synchronisation
+        state = 0
+        while(state != 5):
+            #reads 1 byte
+            c1 = ser_epuck.read(1)
 
-# class serial_thread(Thread):
+            if(state == 0):
+                if(c1 == b'S'):
+                    state = 1
+                else:
+                    state = 0
+            elif(state == 1):
+                if(c1 == b'T'):
+                    state = 2
+                elif(c1 == b'S'):
+                    state = 1
+                else:
+                    state = 0
+            elif(state == 2):
+                if(c1 == b'A'):
+                    state = 3
+                elif(c1 == b'S'):
+                    state = 1
+                else:
+                    state = 0
+            elif(state == 3):
+                if(c1 == b'R'):
+                    state = 4
+                elif (c1 == b'S'):
+                    state = 1
+                else:
+                    state = 0
+            elif(state == 4):
+                if(c1 == b'T'):
+                    state = 5
+                elif (c1 == b'S'):
+                    state = 1
+                else:
+                    state = 0
+        print("Receiving message...")
+        # Read message type and length
+        msg = ser_epuck.readline().decode("utf_8")
+        length = struct.unpack('<h',ser_epuck.read(2))  # length is sent as an uint16
+        length = length[0]
+        output_buffer = b''
+        # Read rest of buffer
+        if length > MAX_BUFFER_LENGTH:
+            while length > MAX_BUFFER_LENGTH:
+                output_buffer += ser_epuck.read(MAX_BUFFER_LENGTH)
+                length -= MAX_BUFFER_LENGTH
+        else:
+            output_buffer = ser_epuck.read(length)
 
-#     def __init__(self, port): # constructor
-#         Thread.__init__(self)
-#         # class variables
+        if "color" in msg:
+            print("Requesting color change " + output_buffer.decode("utf8"))
+            ser_arduino.write(output_buffer)
+            conf_msg = ""
+            error_count = 0
+            while CONFIRMATION_MSG not in conf_msg and error_count < ERROR_COUNT_MAX:
+                conf_msg = ser_arduino.readline().decode("utf_8")
+                error_count += 1
+                if CONFIRMATION_MSG in conf_msg or error_count == ERROR_COUNT_MAX:
+                    time.sleep(0.5)
+                    print("Arduino has finished changing colors.")
+                    send_command(ser_epuck, "C")
 
-#         # attempt conneciton to e-puck
-#         error_count = 0
-#         while error_count < ERROR_COUNT_MAX:
-#             print("Attempting connection to " + port + "...")
-#             try:
-#                 self.ser = serial.Serial(port, SERIAL_BAUD_RATE, 
-#                 timeout = TIMEOUT_PERIOD)
-#                 print("Connection established on " + port)
-#                 break
-#             except serial.SerialException:
-#                 print("Cannot establish connection to the e-puck."
-#                 " Retrying " + str(error_count) + "/" + str(ERROR_COUNT_MAX))
-#                 error_count += 1
-#                 time.sleep(TIMEOUT_PERIOD)
-#         if error_count == ERROR_COUNT_MAX:
-#             print("Connection failed on " + port +
-#             ". Verify that the e-puck is connected to Bluetooth.")
-#             sys.exit(0)
-#         # discard input and ouput buffers
-#         self.ser.flushInput()
-#         self.ser.flushOutput()
+        time.sleep(0.5)
 
-#     # def run(self):
 
-#     #     while(self.alive):
+
+
+
 
 def receive_image(ser):
     state = 0
-
     while(state != 5):
         #reads 1 byte
         c1 = ser.read(1)
@@ -155,7 +199,6 @@ def receive_image(ser):
             else:
                 state = 0
 
-    print("Receiving image")
 
 
 
@@ -201,18 +244,18 @@ def parse_arg():
         " Default serial port is " +port)
     return port
 
-def connect_to_epuck(port):
+def connect_to_port(port, baud_rate, reset):
     error_count = 0
     while error_count < ERROR_COUNT_MAX:
         print("Attempting connection to " + port + "...")
 
         try:
-            ser = serial.Serial(port, SERIAL_BAUD_RATE, 
+            ser = serial.Serial(port, baud_rate, 
             timeout = TIMEOUT_PERIOD)
             print("Connection established on " + port)
             break
         except serial.SerialException:
-            print("Cannot establish connection to the e-puck."
+            print("Cannot establish connection to port " + port + ". " +
             " Retrying " + str(error_count) + "/" + str(ERROR_COUNT_MAX))
             error_count += 1
             time.sleep(TIMEOUT_PERIOD)
@@ -226,7 +269,8 @@ def connect_to_epuck(port):
     # discard input and ouput buffers
     # ser.reset_input_buffer()
     # ser.reset_output_buffer()
-    send_command(ser, 'R') # reset the e-puck when first connecting
+    if reset == True:
+        send_command(ser, 'R') # reset the e-puck when first connecting
     return ser
 
 # todo: check state of e-puck: certain command should not be sent when
@@ -273,9 +317,29 @@ def send_command(ser, command):
         if command == 'G':
             send_move_data(ser)
 
+def read_serial(ser):
+    while True:
+        msg = ser.readline().decode("utf_8")
+        if CONFIRMATION_MSG in msg:
+            print("Arduino has finished changing colors.")
+        time.sleep(0.5)
+
+def request_command(ser_epuck, ser_arduino):
+    while True:
+        command = input("Type a command: ")
+        if command != 'a':
+            send_command(ser_epuck, command)
+            # receive_data(ser_epuck)
+            # time.sleep(1)
+        elif command == 'a':
+            command = input("Type a command (arduino): ")
+            ser_arduino.write(command.encode())
+
+    time.sleep(0.5)
+
 def get_data():
     # data_color = np.array([0, 4, 6], dtype = np.uint8)                               # rewrite
-    data_color = np.array([100,3,1,5,1,1,7,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], dtype = np.uint8)                               # rewrite
+    data_color = np.array([0, 1, 2, 3, 4], dtype = np.uint8)                               # rewrite
     # data_pos = np.array([[430, 0]], dtype = np.uint16)
     # data_pos = np.array([[512, 0], [612, 0], [612, 50], [512, 50], [512, 0]], dtype = np.uint16) # 2 squares
     # data_pos = np.array([[512, 0], [463, 0],[467, 26], [461, 49], [435, 89],[415, 138], [404, 158], [417, 164], [448, 139], [450, 104], [449, 154], [455, 187], [481, 186], [477, 163], [474, 284], [487, 294], [500, 289], [502, 268], [482, 268], [481, 263], [481, 285], [494, 285], [481, 263],[494, 269], [501, 267], [508, 188], [516, 160], [509, 188], [534, 186],[553, 152], [541, 175], [568, 157], [568, 127], [542, 59], [544, 0], [512, 0]], dtype = np.uint16)
@@ -284,7 +348,12 @@ def get_data():
      # data_pos = np.array([[512, 0], [562, 0],[562, 50], [512, 50], [512, 0],[512, 100], [562, 100], [562, 50], [562, 0], [512, 0]], dtype = np.uint16)
     # data_pos = np.array([[512, 0], [600, 0]], dtype = np.uint16) # long line
     # data_pos = np.array([[512, 0],[512, 30], [512, 0], [612, 0],[512, 0], [412, 0], [512, 0]], dtype = np.uint16) # y test
-    data_pos = np.array([[512, 0],[512, 100], [512, 200],[612, 200], [712, 200], [712, 100],[712, 0],[612, 0],[512, 0]], dtype = np.uint16) # square test
+    # data_pos = np.array([[512, 0],[512, 100], [512, 200],[412, 200], [312, 200], [312, 100],[312, 0],[412, 0],[512, 0], [512, 100], [512, 200],[612, 200], [712, 200], [712, 100],[712, 0],[612, 0],[512, 0]], dtype = np.uint16) # square test
+
+    # data_pos = np.array([[512, 0], [512, 100], [512, 200],[412, 200], [312, 200], [312, 100],[312, 0],[412, 0],[512, 0]], dtype = np.uint16) # LEFT square test
+    # data_pos = np.array([[512, 0], [512, 100], [612, 100], [612, 0], [512, 0]], dtype = np.uint16) # RIGHT square test
+    # data_pos = np.array([[512, 0], [612, 0], [612, 100], [612, 200], [512, 200], [412, 200], [412,100], [412, 0], [512, 0]], dtype = np.uint16) # RIGHT square test    
+    data_pos = np.array([[512, 0], [612, 100], [512, 200], [412,100], [512, 0]], dtype = np.uint16) # TILTED square test    
     # data_pos = np.array([[512, 0],[512, 150]], dtype = np.uint16) # going down
     # data_pos = np.array([[480, 0]], dtype = np.uint16) # y test
     
@@ -322,7 +391,6 @@ def send_move_data(ser):
     print("Move data sent.")
 
 
-
         
 # ===========================================================================
 #  Functions.                                                         
@@ -332,13 +400,33 @@ def send_move_data(ser):
 
 def main():
     port = parse_arg()
-    ser = connect_to_epuck(port)
+    ser_epuck = connect_to_port(port, SERIAL_BAUD_RATE, True)
+    ser_arduino = connect_to_port("COM22", BT_BAUD_RATE, False)
+
+    # read_arduino = threading.Thread(target = read_serial, args = (ser2,))
+    # read_arduino.setDaemon(True)
+    # read_arduino.start()
+
+    request_cmd = threading.Thread(target = request_command, args = (ser_epuck, ser_arduino))
+    request_cmd.setDaemon(True)
+    request_cmd.start()
+
+    rcv_data = threading.Thread(target=receive_data, 
+                                args = (ser_epuck, ser_arduino))
+    rcv_data.setDaemon(True)
+    rcv_data.start()
 
     while True:
-        command = input("Type a command: ")
-        send_command(ser, command)
+        # command = input("Type a command: ")
+        # if command != 'a':
+        #     # send_command(ser, command)
+        #     time.sleep(1)
+        # elif command == 'a':
+        #     command = input("Type a command (arduino): ")
+        #     ser2.write(command.encode())
         # elif command == 'B':
         #     # receive_image(ser)
+        time.sleep(0.1)
 if __name__=="__main__":
     main()
     
