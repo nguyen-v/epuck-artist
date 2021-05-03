@@ -65,7 +65,7 @@ static void init_all(void)
 	halInit();
 	chSysInit();
 	mpu_init();
-	usb_start();
+//	usb_start();
 	com_serial_start();
 	motors_init();
 	sensors_init();
@@ -116,15 +116,15 @@ int main(void)
 //	create_thd_draw();
 //	draw_move(0, 0);
 
-	uint16_t dist = 0;
-	uint16_t dist_kalman = 0;
-	uint16_t dist_kalman2 = 0;
-	uint16_t dist_kalman3 = 0;
-
-	int prox1 = 0;
-	int prox3 = 0;
-	int prox5 = 0;
-	int prox7 = 0;
+//	uint16_t dist = 0;
+//	uint16_t dist_kalman = 0;
+//	uint16_t dist_kalman2 = 0;
+//	uint16_t dist_kalman3 = 0;
+//
+//	int prox1 = 0;
+//	int prox3 = 0;
+//	int prox5 = 0;
+//	int prox7 = 0;
 
 
 	while(1) {
