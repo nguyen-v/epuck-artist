@@ -20,7 +20,7 @@ typedef struct edge_pos{
 typedef struct edge_track{
 	struct cartesian_coord pos;
 	uint8_t label;
-	uint8_t start_end;	//line = 0, edge = 1;
+	bool is_extremity;	//line = 0, edge = 1;
 	uint8_t color;
 } edge_track;
 
@@ -31,9 +31,9 @@ enum edge_status{start = 0, end = 1, init = 2};
 /*===========================================================================*/
 
 /**
- * @brief						modifies position and color buffer in mod_data
- * 								with positions and colors that the robot has to follow
- * @return						none
+ * @brief             modifies position and color buffer in mod_data
+ *                    with positions and colors that the robot has to follow
+ * @return            none
  */
 void path_planning(void);
 
