@@ -822,7 +822,7 @@ void path_planning(void)
 	// set color of each contour
 	set_contours_color(color, size_edges);
 
-	//	optimize contour by deleting redundant positions in contours buffer
+	// optimize contour by deleting redundant positions in contours buffer
 	uint16_t opt_contours_size = path_optimization(contours,edges, size_edges);
 
 	// reallocate contour with new size
