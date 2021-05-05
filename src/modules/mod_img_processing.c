@@ -47,14 +47,14 @@
 #define FIRST_OCTANT_L     -22.5f
 #define FIRST_OCTANT_H     22.5f
 
-#define SECOND_OCTANT_L	    22.5
+#define SECOND_OCTANT_L    22.5
 #define SECOND_OCTANT_H    67.5
 
 #define THIRD_OCTANT_L     67.5
 #define THIRD_OCTANT_H     112.5
 
-#define FOURTH_OCTANT_L	    112.5
-#define FOURTH_OCTANT_H	    157.5
+#define FOURTH_OCTANT_L    112.5
+#define FOURTH_OCTANT_H    157.5
 
 #define FIFTH_OCTANT_L     157.5
 #define FIFTH_OCTANT_H     -157.5
@@ -65,8 +65,8 @@
 #define SEVENTH_OCTANT_L   -112.5
 #define SEVENTH_OCTANT_H   -67.5
 
-#define EIGHTH_OCTANT_L	    -67.5
-#define EIGHTH_OCTANT_H	    -22.5
+#define EIGHTH_OCTANT_L    -67.5
+#define EIGHTH_OCTANT_H    -22.5
 
 
 #define HIGH_THRESHOLD     0.18
@@ -105,34 +105,34 @@
 
 // Hue thresholds in degree (0-360)
 #define HUE_MIN	            0
-#define HUE_MAX	            360
+#define HUE_MAX            360
 
 #define RED_THR_L          25
 #define RED_THR_H          280
 
-#define GREEN_THR_L	        135
-#define GREEN_THR_H	        195
+#define GREEN_THR_L        135
+#define GREEN_THR_H        195
 
 #define BLUE_THR_L         200
 #define BLUE_THR_H         230
 
 // Camera settings
-#define CAMERA_CONTRAST	    150
+#define CAMERA_CONTRAST    150
 #define CAMERA_SUBSAMPLING 4
 #define CAMERA_X_POS       ((PO8030_MAX_WIDTH-CAMERA_SUBSAMPLING*IM_LENGTH_PX)/2)
 #define CAMERA_Y_POS       0
 
 
 #define KER_DIV 159
-const uint8_t Gaus5x5[] = {	 2,  4,  5,  4,  2,
+const uint8_t Gaus5x5[] = { 2,  4,  5,  4,  2,
                              4,  9,  12, 9,  4,
                              5,  12, 15, 12, 5,
                              4,  9,  12, 9,  4,
                              2,  4,  5,  4,  2 };
 
-const int8_t Kx[] =	{ -1,  0,  1,
-                      -2,  0,  2,
-                      -1,  0,  1 };
+const int8_t Kx[] = { -1,  0,  1,
+                       -2,  0,  2,
+                       -1,  0,  1 };
 
 const int8_t Ky[] = { 1,  2,  1,
                        0,  0,  0,
