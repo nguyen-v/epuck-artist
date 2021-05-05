@@ -15,7 +15,7 @@ typedef struct cartesian_coord {
 	uint16_t y;
 } cartesian_coord;
 
-enum Colors{white, black, red, blue, green};
+enum Colors{white, black, red, green, blue};
 
 /*===========================================================================*/
 /* External declarations.                                                    */
