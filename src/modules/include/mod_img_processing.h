@@ -33,6 +33,10 @@ enum Octants{first_octant, second_octant, third_octant, fourth_octant,
 /* External declarations.                                                    */
 /*===========================================================================*/
 
+/**
+ * @brief                       creates image capture and image processing threads
+ * @return                      none
+ */
 void mod_img_processing_init(void);
 
 /**
