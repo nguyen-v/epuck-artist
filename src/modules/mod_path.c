@@ -487,6 +487,7 @@ static void contour_optimization(edge_track *contour, uint16_t start, uint16_t e
 
 	uint16_t start_depth[(end-start)/2];
 	uint16_t end_depth[(end-start)/2];
+
 	start_depth[0] = start;
 	end_depth[0] = end;
 
@@ -505,7 +506,6 @@ static void contour_optimization(edge_track *contour, uint16_t start, uint16_t e
 
 		uint16_t index = start;
 		float dmax = 0;
-
 
 		for(uint16_t i = index+1; i < end; ++i){
 			if(opt_contour[i-global_start]){
@@ -606,7 +606,7 @@ static uint16_t path_optimization(edge_track* contours, edge_pos* edges,
 			}
 
 			if(loop){
-				contours[opt_contours_size] = contours[start_index];
+				contours[opt_contours_size] = contours[contours_size];
 				++opt_contours_size;
 				++contours_size;
 			}
