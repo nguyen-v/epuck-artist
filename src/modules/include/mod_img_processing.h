@@ -19,12 +19,6 @@
 /* Module data structures and types.                                         */
 /*===========================================================================*/
 
-typedef struct hsl_color {
-	float hue;	// hue
-//	float sat;	// saturation
-	float lum;	// luma
-} hsl_color;
-
 typedef struct rgb_color {
 	uint8_t red;
 	uint8_t green;
@@ -38,6 +32,8 @@ enum Octants{first_octant, second_octant, third_octant, fourth_octant,
 /*===========================================================================*/
 /* External declarations.                                                    */
 /*===========================================================================*/
+
+void mod_img_processing_init(void);
 
 /**
  * @brief                       captures an image from camera and calls

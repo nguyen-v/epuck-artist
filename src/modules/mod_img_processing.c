@@ -21,6 +21,7 @@
 
 // Module headers
 #include <mod_img_processing.h>
+#include <mod_path.h>
 #include <mod_data.h>
 #include <tools.h>
 
@@ -94,27 +95,13 @@
 #define LUMA_GREEN_COEFF   0.5870f
 #define LUMA_BLUE_COEFF	    0.1140f
 
-#define LOW_LIGHT_THR      1.1f
+#define BLACK_THRESHOLD    60
+#define BLUE_MIN_VALUE     45
+#define GREEN_BLUE_DIFF    20
+#define GREEN_COEFF        1.2f
+#define RED_COEFF          1.5f
 
-#define BLACK_THRESHOLD    80
-#define SAME_COLOR_THR     5
-
-#define HEXAGON_ANGLE      60.f
-#define H_PRIME_MAX	        6
 #define NUMBER_COLORS      3
-
-// Hue thresholds in degree (0-360)
-#define HUE_MIN	            0
-#define HUE_MAX            360
-
-#define RED_THR_L          25
-#define RED_THR_H          280
-
-#define GREEN_THR_L        135
-#define GREEN_THR_H        195
-
-#define BLUE_THR_L         200
-#define BLUE_THR_H         230
 
 // Camera settings
 #define CAMERA_CONTRAST    150
@@ -145,108 +132,50 @@ const int8_t Ky[] = { 1,  2,  1,
 static uint8_t *img_buffer;
 static uint8_t *img_temp_buffer;
 
-static uint8_t* sobel_angle_state;
-static float* I_mag;
+static uint8_t *sobel_angle_state;
+static float *I_mag;
+
+static bool capture_thd_alive = false;
+static bool process_thd_alive = false;
+
+/*===========================================================================*/
+/* Semaphores.                                                               */
+/*===========================================================================*/
+
+static BSEMAPHORE_DECL(sem_image_captured, TRUE);
+static BSEMAPHORE_DECL(sem_capture_image, TRUE);
+
+/*===========================================================================*/
+/* Module thread pointers.                                                   */
+/*===========================================================================*/
+
+static thread_t* ptr_capture_image;
+static thread_t* ptr_process_image;
 
 /*===========================================================================*/
 /* Module local functions.                                                   */
 /*===========================================================================*/
 
 /**
- * @brief                       returns hue in hsl format from rgb values
- * @param[in]   rgb             rgb_color struct containing rgb information
- * @return                      hue in range 0-360
- * @note                        https://en.wikipedia.org/wiki/HSL_and_HSV
- */
-static float rgb_get_hue(rgb_color rgb)
-{
-	float r = rgb.red/RGB_MAX_VALUE;
-	float g = rgb.green/RGB_MAX_VALUE;
-	float b = rgb.blue/RGB_MAX_VALUE;
-	float max = fmax(fmax(r, g), b);
-	float min = fmin(fmin(r, g), b);
-	float chroma = max - min;
-	float H;
-	if (chroma == 0)
-		return chroma;
-	if(max == r)
-		H = fmod((g-b)/chroma, H_PRIME_MAX);
-	else if (max == g)
-		H = (b-r)/chroma+H_PRIME_MAX/NUMBER_COLORS;
-	else if (max == b)
-		H = (r-g)/chroma+2*H_PRIME_MAX/NUMBER_COLORS;
-	else
-		return HUE_MIN;
-
-	H *= HEXAGON_ANGLE;
-	return H;
-
-}
-
-/**
  * @brief                       returns luma in hsl format from rgb values
  * @param[in]   rgb             rgb_color struct containing rgb information
  * @return                      lumina in range 0-1
  * @note                        https://en.wikipedia.org/wiki/HSL_and_HSV
  */
-static float rgb_get_luma(rgb_color rgb)
+static uint8_t classify_color(rgb_color rgb)
 {
-	float r = rgb.red/RGB_MAX_VALUE;
-	float g = rgb.green/RGB_MAX_VALUE;
-	float b = rgb.blue/RGB_MAX_VALUE;
-	return LUMA_RED_COEFF*r + LUMA_GREEN_COEFF*g + LUMA_BLUE_COEFF*b;
-}
-
-
-
-///**
-// * @brief                     returns saturation in hsl format from rgb values
-// * @param[in]   rgb           rgb_color struct containing rgb information
-// * @return                    saturation in range 0-1
-// * @note                      https://en.wikipedia.org/wiki/HSL_and_HSV
-// * @note                      not accurate for low light conditions
-// */
-//static float rgb_get_sat(float luma, uint8_t red, uint8_t green, uint8_t blue)
-//{
-//	if (luma == 1 || luma == 0)
-//		return 0;
-//	float r = red/RGB_MAX_VALUE;
-//	float g = green/RGB_MAX_VALUE;
-//	float b = blue/RGB_MAX_VALUE;
-//	float max = fmax(fmax(r, g), b);
-//	float min = fmin(fmin(r, g), b);
-//	float c = max - min;	// chroma
-//
-//	return c/(1-fabs(2*luma-1));
-//}
-
-
-
-/**
- * @brief                       returns luma in hsl format from rgb values
- * @param[in]   rgb             rgb_color struct containing rgb information
- * @return                      lumina in range 0-1
- * @note                        https://en.wikipedia.org/wiki/HSL_and_HSV
- */
-static uint8_t classify_color(hsl_color hsl, rgb_color rgb)
-{
-	if (abs((int16_t)rgb.red - (int16_t)rgb.blue) < SAME_COLOR_THR
-        && abs((int16_t)rgb.red - (int16_t)rgb.green) < SAME_COLOR_THR
-        && abs((int16_t)rgb.green - (int16_t)rgb.blue) < SAME_COLOR_THR) {
-		if (((int16_t)rgb.red + (int16_t)rgb.green + (int16_t)rgb.blue)/NUMBER_COLORS
-		      > BLACK_THRESHOLD)
-			return white;
-		else
-			return black;
-	}
-	if (hsl.hue <= RED_THR_L || hsl.hue > RED_THR_H)
+	if (rgb.red > RED_COEFF*rgb.blue && rgb.red > RED_COEFF*rgb.green)
 		return red;
-	else if (hsl.hue > GREEN_THR_L && hsl.hue <= GREEN_THR_H)
+	else if (abs((int16_t)rgb.blue - (int16_t)rgb.green) < GREEN_BLUE_DIFF
+	         && rgb.green > GREEN_COEFF*rgb.red)
 		return green;
-	else if (hsl.hue > BLUE_THR_L && hsl.hue <= BLUE_THR_H)
+	else if ((rgb.blue > rgb.red) && (rgb.blue > rgb.green)
+	           && (rgb.blue > BLUE_MIN_VALUE))
 		return blue;
-
-	return white;
+	else if ((rgb.red + rgb.green + rgb.blue)/NUMBER_COLORS < BLACK_THRESHOLD)
+		return black;
+	else
+		return white;
 }
 
 /**
@@ -258,7 +187,6 @@ static uint8_t classify_color(hsl_color hsl, rgb_color rgb)
  */
 static void set_grayscale_filter_colors(uint8_t* color)
 {
-	hsl_color hsl;
 	rgb_color rgb;
 //	uint8_t red_px, green_px, blue_px = 0;
 	for(uint16_t i = 0; i < (IM_LENGTH_PX * IM_HEIGHT_PX)*2; i+=2){
@@ -269,15 +197,12 @@ static void set_grayscale_filter_colors(uint8_t* color)
 		rgb.green = (rgb_565 & GREEN_MASK) >> RGB_GREEN_POS;
 		rgb.blue = (rgb_565 & BLUE_MASK) << RGB_BLUE_POS;
 
-		// convert to hsl color space for easier manipulation
-		hsl.hue = rgb_get_hue(rgb);
-		hsl.lum = rgb_get_luma(rgb);
-
 		// classify pixel color (black, red, green, blue, background (white))
-		color[i/2] = classify_color(hsl, rgb);
+		color[i/2] = classify_color(rgb);
 
 		// convert img_buffer to grayscale
-		img_buffer[i/2] = hsl.lum*RGB_MAX_VALUE;
+		img_buffer[i/2] = LUMA_RED_COEFF*rgb.red + LUMA_GREEN_COEFF*rgb.green
+		                  + LUMA_BLUE_COEFF*rgb.blue;
 	}
 }
 
@@ -671,19 +596,17 @@ static void canny_edge(void){
 }
 
 /*===========================================================================*/
-/* Module exported functions.                                                */
+/* Module threads.                                                           */
 /*===========================================================================*/
 
-uint8_t* get_img_buffer(void)
-{
-	return img_buffer;
-}
+static THD_WORKING_AREA(wa_capture_image, 256);
+static THD_FUNCTION(thd_capture_image, arg) {
 
-
-void capture_image(void){
+	chRegSetThreadName(__FUNCTION__);
+	(void)arg;
 
 	po8030_advanced_config(FORMAT_RGB565,
-	                      (PO8030_MAX_WIDTH-CAMERA_SUBSAMPLING*IM_LENGTH_PX)/2, 0,
+	                       CAMERA_X_POS, CAMERA_Y_POS,
 	                       CAMERA_SUBSAMPLING*IM_LENGTH_PX,
 	                       CAMERA_SUBSAMPLING*IM_HEIGHT_PX,
 	                       SUBSAMPLING_X4, SUBSAMPLING_X4);
@@ -693,10 +616,67 @@ void capture_image(void){
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
 
-	dcmi_capture_start();
-	wait_image_ready();
+    while(1){
+    	chBSemWait(&sem_capture_image);
+		dcmi_capture_start();
+		wait_image_ready();
+		chBSemSignal(&sem_image_captured);
+
+    }
+}
+
+
+static THD_WORKING_AREA(wa_process_image, 1024);
+static THD_FUNCTION(thd_process_image, arg) {
+
+	chRegSetThreadName(__FUNCTION__);
+	(void)arg;
+	while(1){
+	chBSemWait(&sem_image_captured);
 	img_buffer = dcmi_get_last_image_ptr();
 	canny_edge();
+	path_planning();
+	}
+}
+
+static void capture_create_thd(void)
+{
+	if (!capture_thd_alive) {
+		ptr_capture_image = chThdCreateStatic(wa_capture_image, sizeof(wa_capture_image),
+		                                      NORMALPRIO, thd_capture_image, NULL);
+		capture_thd_alive = true;
+	}
+}
+
+static void process_img_create_thd(void)
+{
+	if (!process_thd_alive) {
+		ptr_process_image = chThdCreateStatic(wa_process_image, sizeof(wa_process_image),
+		                                      NORMALPRIO+1, thd_process_image, NULL);
+		process_thd_alive = true;
+	}
+}
+
+/*===========================================================================*/
+/* Module exported functions.                                                */
+/*===========================================================================*/
+
+uint8_t* get_img_buffer(void)
+{
+	return img_buffer;
+}
+
+
+
+void mod_img_processing_init(void)
+{
+	capture_create_thd();
+	process_img_create_thd();
+}
+
+void capture_image(void){
+	chBSemSignal(&sem_capture_image);
+
 }
 
 void send_image(void) {
