@@ -18,10 +18,24 @@
 #include "chprintf.h"
 #include <usbcfg.h>
 
+
+#include <camera/po8030.h>
+
+#include "camera/dcmi_camera.h"
+
+
+
+
+
+
+
 // Module headers
 
 #include <main.h>
 #include <mod_communication.h>
+#include "modules/include/mod_img_processing.h"
+#include "modules/include/mod_path.h"
+#include <mod_data.h>
 
 /*===========================================================================*/
 /* Module constants.                                                         */
@@ -41,9 +55,31 @@
 
 #define PERIOD_CMD		1000
 
+
 /*===========================================================================*/
 /* Module local functions.                                                   */
 /*===========================================================================*/
+
+//just a test
+static void send_path(void) // just a test, to include with communication functions in mod_state branch
+{
+	uint16_t length = data_get_length();
+	cartesian_coord* path = data_get_pos();
+	uint8_t* color = data_get_color();
+
+	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START\r", 6);
+	chprintf((BaseSequentialStream *)&SD3, "path\n");
+	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&length, sizeof(uint16_t));
+	for(uint16_t i = 0; i<length; ++i) {
+		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&(path[i].x), sizeof(uint8_t));
+	}
+	for(uint16_t i = 0; i<length; ++i) {
+		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&(path[i].y), sizeof(uint8_t));
+	}
+	for(uint16_t i = 0; i<length; ++i) {
+		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&(color[i]), sizeof(uint8_t));
+	}
+}
 
 /**
  * @brief				Initalizes all modules.
@@ -54,7 +90,10 @@ static void init_all(void)
 	chSysInit();
 	mpu_init();
 	usb_start();
+	dcmi_start();
+	po8030_start();
 	com_serial_start();
+	mod_img_processing_init();
 }
 
 /**
@@ -64,6 +103,9 @@ static void init_all(void)
  */
 static void process_command(uint8_t cmd)
 {
+
+//	uint8_t* color = (uint8_t*)malloc(IM_LENGTH_PX*IM_HEIGHT_PX*sizeof(uint8_t));
+
 	switch(cmd) {
 		case CMD_RESET:
 			palClearPad(GPIOD, GPIOD_LED1);
@@ -75,11 +117,35 @@ static void process_command(uint8_t cmd)
 		case CMD_CONTINUE:
 			break;
 		case CMD_CALIBRATE:
+//			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
+//			img_buffer = dcmi_get_last_image_ptr();
+//			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer, 4000);
+//			chThdSleepMilliseconds(400);
+//			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+4000, 4000);
+//			chThdSleepMilliseconds(400);
+//			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+8000, 4000);
+//			chThdSleepMilliseconds(400);
+//			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+12000, 4000);
+//			chThdSleepMilliseconds(400);
+//			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+16000, 2000);
+//			chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+70*100, 70*100);
+//			send_image_half(img_buffer);
+//			send_image();
+//			send_image_half();
+			send_path();
 			break;
 		case CMD_GET_DATA:
-			com_receive_data((BaseSequentialStream *)&SD3);
+//			com_receive_data((BaseSequentialStream *)&SD3);
 			break;
 		case CMD_DRAW:
+			capture_image();
+			chprintf((BaseSequentialStream *)&SDU1, "draw \r \n");
+//			path=path_planning();
+//			path_planning();
+			// Path te renvoit les coordonnées x et y du trajet à parcourir...normalement.
+			// color  change sa taille et a dorénavant la même taille que path. Chaque point a sa propre couleur
+			// assignée.
+			chprintf((BaseSequentialStream *)&SDU1, "Image captured \r \n");
 			break;
 		case CMD_INTERACTIVE:
 			break;
