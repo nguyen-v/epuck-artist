@@ -36,7 +36,7 @@
 #define MAX_SPEED              250    // steps/s
 
 #define STEP_THRESHOLD         5      // defines how close we should get to
-								       // goal length in steps
+                                       // goal length in steps
 
 #define TIME_SLEEP_MIN         20     // ms motors dont have time to react if
                                        // too low
@@ -60,7 +60,7 @@ static bool is_paused = false;
 static thread_t* ptr_draw;
 
 /*===========================================================================*/
-/* Module local functions.                                                	 */
+/* Module local functions.                                                   */
 /*===========================================================================*/
 
 /**
@@ -108,7 +108,7 @@ static uint16_t offset_x_pos(uint16_t x)
 }
 
 /*===========================================================================*/
-/* Module threads.                                                   		 */
+/* Module threads.                                                           */
 /*===========================================================================*/
 
 /**
