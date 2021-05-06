@@ -28,7 +28,7 @@
 #define MAX_BUFFER_SIZE			4000
 
 /*===========================================================================*/
-/* Module exported functions.                                                   */
+/* Module exported functions.                                                */
 /*===========================================================================*/
 
 void com_serial_start(void)
