@@ -1,16 +1,38 @@
 /**
  * @file    mod_calibration.h
- * @brief   Header for drawing module.
+ * @brief   External declarations of calibration module.
  */
 
 #ifndef _MOD_CALIBRATION_H_
 #define _MOD_CALIBRATION_H_
-//float get_initial_height_cm(void);
 
+/*===========================================================================*/
+/* External declarations.                                                    */
+/*===========================================================================*/
+
+/**
+ * @brief                        Creates calibration thread
+ * @return                       none
+ */
 void cal_create_thd(void);
+
+/**
+ * @brief                        Stops calibration thread
+ * @return                       True calibration distance in steps
+ */
 uint16_t cal_stop_thd(void);
-//uint16_t cal_stop_thd(void);
-//void cal_set_init_length(void);
+
+/**
+ * @brief                        Sets goal calibration distance
+ * @return                       none
+ */
 void cal_set_goal_distance(void);
 
-#endif
+/**
+ * @brief                        Returns current calibration state
+ * @return                       True if currently calibrating, false otherwise
+ */
+bool cal_get_state(void);
+
+
+#endif /* _MOD_CALIBRATION_H_ */
