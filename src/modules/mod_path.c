@@ -473,6 +473,7 @@ static void set_contours_color(uint8_t* color, uint16_t size_edges)
 		free(green_count);
 		free(blue_count);
 }
+
 /**
  * @brief                       optimizes the path, i.e. deletes redundant points
  *                              between two edges
@@ -481,6 +482,12 @@ static void set_contours_color(uint8_t* color, uint16_t size_edges)
  * @param[in]   end             end index of general and the subdivised contours
  * @param[out]  opt_contour     pointer to buffer containing index of redundant contours
  * @return                      none
+ * @details                     if the maximum distance is superior to MAX_PERP_DIST, the contour is divided
+ *	    						into 2 subcontours for which the start and end indexes are saved in their
+ *	    						respective buffers. If the maximum distance is equal to zero, this means that
+ *	    						the subcontour is linear and we keep one out of MAX_PIXEL_DIST pixel along the line.
+ *	                            Finally if the maximum distance is inferior to zero, we cut all pixels between
+ *                              the start and the end.
  */
 static void contour_optimization(edge_track *contour, uint16_t start, uint16_t end,
                                   uint8_t* opt_contour){
@@ -517,14 +524,6 @@ static void contour_optimization(edge_track *contour, uint16_t start, uint16_t e
 				}
 			}
 		}
-	 /**
-	  * If the maximum distance is superior to MAX_PERP_DIST, the contour is divided
-	  * into 2 subcontours for which the start and end indexes are saved in their
-	  * respective buffers. If the maximum distance is equal to zero, this means that
-	  * the subcontour is linear and we keep one out of MAX_PIXEL_DIST pixel along the line.
-	  *	Finally if the maximum distance is inferior to zero, we cut all pixels between
-	  *	the start and the end.
-	  */
 
 		if(dmax >= MAX_PERP_DIST){
 			start_depth[stack_count] = start;

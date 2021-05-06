@@ -110,7 +110,9 @@
 #define CAMERA_Y_POS       0
 
 
+
 #define KER_DIV 159
+
 const uint8_t Gaus5x5[] = { 2,  4,  5,  4,  2,
                             4,  9,  12, 9,  4,
                             5,  12, 15, 12, 5,
@@ -179,11 +181,9 @@ static uint8_t classify_color(rgb_color rgb)
 }
 
 /**
- * @brief                       a
- * @param[in]   a               a
- * @param[out]  a               a
- * @return                      a
- * @note                        a
+ * @brief						converts an rgb565 color to a grayscale image
+ * @param[out]  color           pointer to buffer containing path color
+ * @return                      none
  */
 static void set_grayscale_filter_colors(uint8_t* color)
 {
@@ -206,15 +206,10 @@ static void set_grayscale_filter_colors(uint8_t* color)
 	}
 }
 
-// 5x5 Gaussian Filter. A gaussian function is convoluted to the signal
-	// in order to reduce the noise (Kernel convolution was used)
-
 /**
- * @brief                       a
- * @param[in]   a               a
- * @param[out]  a               a
- * @return                      a
- * @note                        a
+ * @brief     Filters out obvious noise and smoothens the image.
+ * @return    none
+ * @note      A 5x5 Gaussian filter was chosen with a standard deviation of 1.
  */
 static void gaussian_filter(void)
 {
@@ -241,15 +236,11 @@ static void gaussian_filter(void)
 	}
 }
 
-// Application of the Sobel filters onto the image.
-// It will gives us the gradient intensity.
-
 /**
- * @brief                       a
- * @param[in]   a               a
- * @param[out]  a               a
- * @return                      a
- * @note                        a
+ * @brief                       The sobel filter emphasizes edges by computing the norm of the gradient of the image intensity
+ *                              for each pixel. From these values, we can also extract the gradient's angle from this function
+ *                              and use it later for edge thinning.
+ * @return        max           The maximum gradient intensity computed for an image.
  */
 static float sobel_filter(void)
 {
@@ -300,11 +291,11 @@ static float sobel_filter(void)
 }
 
 /**
- * @brief                       a
- * @param[in]   a               a
- * @param[out]  a               a
- * @return                      a
- * @note                        a
+ * @brief                       Sets the color at the edge to the color inside the shape that the edge is encircling.
+ *                              This is possible for the sobel_angle_state points to the interior of
+ *                              a shape.
+ * @param[out]     color        Pointer to buffer containing path color
+ * @return                      none
  */
 static void set_strong_pixel_colors(uint8_t* color)
 {
@@ -341,25 +332,19 @@ static void set_strong_pixel_colors(uint8_t* color)
 					dx = 1; dy = IM_LENGTH_PX;
 					break;
 				}
-				// set the color at the edge to the color inside of the shape
-				// that the edge is encircling. This can be done because
-				// sobel_angle_state gives us the direction of the interior of
-				// a shape.
 				color[pos] = color[pos + dx + dy];
 			}
 		}
 	}
 }
 
-// local maxima suppression : this process' purpose is to thin the edges by suppressing pixels next to high intensity pixels
-// given their gradient angle
 
 /**
- * @brief                       a
- * @param[in]   a               a
- * @param[out]  a               a
- * @return                      a
- * @note                        a
+ * @brief                       Depending on the gradient's angle, we know in which direction an edge thickens for all pixels.
+ *                              Given that, we check if a pixel's gradient intensity is higher than both pixels located in its
+ *                              corresponding octants. If it is the case, then we keep its value. If not, then we put it to 0.
+ * @param[in]      max          The maximum gradient intensity computed for an image.
+ * @return                      none
  */
 static void local_max_supression(float max)
 {
@@ -376,7 +361,7 @@ static void local_max_supression(float max)
 			switch(sobel_angle_state[pos]){
 				case first_octant:
 				case fifth_octant:
-					i = I_mag[pos- dx];
+					i = I_mag[pos - dx];
 					j = I_mag[pos + dx];
 					break;
 				case second_octant:
@@ -391,8 +376,8 @@ static void local_max_supression(float max)
 				break;
 				case fourth_octant:
 				case eighth_octant:
-					i = I_mag[pos- dy - dx];
-					j = I_mag[pos+ dy + dx];
+					i = I_mag[pos - dy - dx];
+					j = I_mag[pos + dy + dx];
 				break;
 			}
 			// multiplied by constant >1 for thicker lines
@@ -404,15 +389,10 @@ static void local_max_supression(float max)
 	}
 }
 
-
-// Double threshold - This is used to identify pixel intensities and impose 2 pixel intensities
-
 /**
- * @brief                       a
- * @param[in]   a               a
- * @param[out]  a               a
- * @return                      a
- * @note                        a
+ * @brief    Compares the gradient intensity of all pixels to selected threshold values and
+ *           separates them into 3 categories : Strong pixels, Weak pixels and Background pixels.
+ * @return   none
  */
 static void double_threshold(void)
 {
@@ -431,14 +411,11 @@ static void double_threshold(void)
 	}
 }
 
-// Edge tracking by hysteresis : weak pixels are transformed into strong pixels if and only if one is present around it
 
 /**
- * @brief                       a
- * @param[in]   a               a
- * @param[out]  a               a
- * @return                      a
- * @note                        a
+ * @brief    Checks if weak pixels are near a strong pixels. If it is the case, then they are turned into strong pixels.
+ * 			 Otherwise, they are turned to background pixels.
+ * @return   none
  */
 static void edge_track_hyst(void)
 {
