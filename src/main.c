@@ -93,6 +93,7 @@ static void init_all(void)
 	dcmi_start();
 	po8030_start();
 	com_serial_start();
+	mod_img_processing_init();
 }
 
 /**
@@ -140,7 +141,7 @@ static void process_command(uint8_t cmd)
 			capture_image();
 			chprintf((BaseSequentialStream *)&SDU1, "draw \r \n");
 //			path=path_planning();
-			path_planning();
+//			path_planning();
 			// Path te renvoit les coordonnées x et y du trajet à parcourir...normalement.
 			// color  change sa taille et a dorénavant la même taille que path. Chaque point a sa propre couleur
 			// assignée.
