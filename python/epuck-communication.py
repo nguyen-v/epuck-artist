@@ -156,27 +156,27 @@ def receive_image(ser):
 #     #     i +=1
 
 # # WORKING 90X100 rgb
-#     # rcv_buffer += ser.read(toRead)
-#     # rcv_buffer += ser.read(toRead)
-#     # rcv_buffer += ser.read(toRead)
-#     # rcv_buffer += ser.read(toRead)
-#     # rcv_buffer += ser.read(2000)
+#     rcv_buffer += ser.read(toRead)
+#     rcv_buffer += ser.read(toRead)
+#     rcv_buffer += ser.read(toRead)
+#     rcv_buffer += ser.read(toRead)
+#     rcv_buffer += ser.read(2000)
 
-#     rcv_buffer += ser.read(toRead)
-#     rcv_buffer += ser.read(toRead)
-#     rcv_buffer += ser.read(1000)
+#     # rcv_buffer += ser.read(toRead)
+#     # rcv_buffer += ser.read(toRead)
+#     # rcv_buffer += ser.read(1000)
 
 #     new_buffer = bytearray(len(rcv_buffer))
-#     # new_buffer[0::2] = rcv_buffer[1::2]
-#     # new_buffer[1::2] = rcv_buffer[0::2]
-#     # im = Image.frombytes("RGB", (100, 90), bytes(new_buffer), "raw", "BGR;16")
-#     im = Image.frombytes("L", (100, 90), bytes(rcv_buffer), "raw")
+#     new_buffer[0::2] = rcv_buffer[1::2]
+#     new_buffer[1::2] = rcv_buffer[0::2]
+#     im = Image.frombytes("RGB", (100, 90), bytes(new_buffer), "raw", "BGR;16")
+#     # im = Image.frombytes("L", (100, 90), bytes(rcv_buffer), "raw")
 #     nameimg ="Image"
 #     im.show(title=nameimg)
 #     im.save("C:/Users/41786/Desktop/Projects/BA-6/SE/img" + ".png", "PNG")
 
 def makesvg(x_buffer, y_buffer, c_buffer, length):
-    out = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" version="1.1">\n'
+    out = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="180" version="1.1">\n'
     polyline = ''
     comma = ''
     color = "black"
