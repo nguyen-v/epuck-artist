@@ -78,6 +78,12 @@ static bool reached_goal_distance = false;
 static bool reached_home = false;
 
 /*===========================================================================*/
+/* Semaphores.                                                               */
+/*===========================================================================*/
+
+static BSEMAPHORE_DECL(sem_changed_color, TRUE);
+
+/*===========================================================================*/
 /* Module thread pointers.                                                   */
 /*===========================================================================*/
 
@@ -196,12 +202,18 @@ static THD_FUNCTION(thd_calibrate, arg)
 
 	// draw first calibration point
 	com_request_color(black);
+	chBSemWait(&sem_changed_color);
+	chThdSleepMilliseconds(100);
 	com_request_color(white);
+	chBSemWait(&sem_changed_color);
 	draw_move(X_DEFAULT+CALIBRATION_SQ_PX, Y_DEFAULT);
 
 	// draw second calibration point
 	com_request_color(black);
+	chBSemWait(&sem_changed_color);
+	chThdSleepMilliseconds(100);
 	com_request_color(white);
+	chBSemWait(&sem_changed_color);
 	draw_move(X_DEFAULT, Y_DEFAULT);
 
 	// calculate expected vertical distance in steps that the robot needs to
@@ -303,6 +315,11 @@ uint16_t cal_stop_thd(void)
 bool cal_get_state(void)
 {
 	return is_calibrating;
+}
+
+void cal_signal_changed_colors(void)
+{
+	chBSemSignal(&sem_changed_color);
 }
 
 //void cal_set_init_length(void)

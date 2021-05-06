@@ -76,12 +76,14 @@ static void process_command(uint8_t cmd)
 			break;
 		case CMD_CONTINUE:
 			draw_resume_thd();
+			cal_signal_changed_colors();
 			break;
 		case CMD_CALIBRATE:
 			cal_create_thd();
 			break;
 		case CMD_GET_DATA:
 			//capture_image()
+			com_receive_data((BaseSequentialStream *)&SD3);
 			break;
 		case CMD_DRAW:
 			draw_create_thd();
