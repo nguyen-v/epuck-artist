@@ -1,21 +1,21 @@
 /**
  * @file    mod_state.h
- * @brief   Header for state module.
+ * @brief   External declarations for state module.
  */
 
 #ifndef _MOD_STATE_H_
 #define _MOD_STATE_H_
 
-//typedef enum{
-//	ST_FINDING_HOME,
-//	ST_CALIBRATION,
-//	ST_CAPTURE,
-//	ST_READING,
-//	ST_DRAWING,
-//	ST_INTERACTIVE
-//} state_t;
+/*===========================================================================*/
+/* External declarations.                                                    */
+/*===========================================================================*/
 
+/**
+ * @brief               Creates command processing thread for receiving commands
+ *                      from the computer.
+ * @return              none
+ */
 void create_thd_process_cmd(void);
 
 
-#endif
+#endif /* _MOD_STATE_H_ */

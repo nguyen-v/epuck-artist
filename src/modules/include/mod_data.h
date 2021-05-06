@@ -15,61 +15,81 @@ typedef struct cartesian_coord {
 	uint16_t y;
 } cartesian_coord;
 
-typedef enum Colors
-{white, black, red, blue, green} Colors;
+typedef enum Colors {
+	white, black, red, blue, green, none
+} Colors;
 
 /*===========================================================================*/
 /* External declarations.                                                    */
 /*===========================================================================*/
 
 /**
- * @brief				Returns pointer to position buffer
- * @param				none
- * @return				pointer to position buffer
+ * @brief               Returns pointer to position buffer
+ * @param               none
+ * @return              pointer to position buffer
  */
 cartesian_coord* data_get_pos(void);
 
 /**
- * @brief				Sets the length (number of coordinates)
- * @param[in]			Number of coordinates
- * @return				none
+ * @brief               Returns pointer to color buffer
+ * @param               none
+ * @return              pointer to color buffer
+ */
+uint8_t* data_get_color(void);
+
+/**
+ * @brief               Sets the length (number of coordinates)
+ * @param[in]           Number of coordinates
+ * @return              none
  */
 
-uint8_t* data_get_color(void);
 
 void data_set_length(uint16_t length);
 
 /**
- * @brief				Returns the length of position/color buffers
- * 						(number of coordinates)
- * @param				none
- * @return				Number of coordinates
+ * @brief               Returns the length of position/color buffers
+ *                      (number of coordinates)
+ * @param               none
+ * @return              Number of coordinates
  */
 uint16_t data_get_length(void);
 
 /**
- * @brief				Resets color and position buffer information
- * @param				none
- * @return				none
+ * @brief               Resets color and position buffer information
+ * @param               none
+ * @return              none
  */
 void data_free(void);
 
 /**
- * @brief				Allocates memory for the position buffer.
+ * @brief               Allocates memory for the position buffer.
  *
- * @param[in] 	length 	Length (number of coordinates)
- * @return				Pointer to position buffer.
- * 						NULL if allocation failed.
+ * @param[in]   length  Length (number of coordinates)
+ * @return              Pointer to position buffer.
+ *                      NULL if allocation failed.
  */
 cartesian_coord* data_alloc_xy(uint16_t length);
 
 /**
- * @brief				Allocates memory for the color buffer.
+ * @brief               Allocates memory for the color buffer.
  *
- * @param[in] 	length 	Length (number of coordinates)
- * @return				Pointer to color buffer.
- * 						NULL if allocation failed.
+ * @param[in]   length  Length (number of coordinates)
+ * @return              Pointer to color buffer.
+ *                      NULL if allocation failed.
  */
 uint8_t* data_alloc_color(uint16_t length);
 
-#endif
+/**
+ * @brief               Sets data status to either ready or not ready
+ * @param[in]   state   State of data
+ * @return              none
+ */
+void data_set_ready(bool state);
+
+/**
+ * @brief               Returns current state of data
+ * @return              Current state of data
+ */
+bool data_get_state(void);
+
+#endif /* _MOD_DATA_H_ */

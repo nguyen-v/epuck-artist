@@ -7,8 +7,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <math.h>
 
 // ChibiOS headers
 
@@ -32,20 +30,20 @@
 
 // List of possible commands sent from the computer
 
-#define CMD_RESET			'R'
-#define CMD_PAUSE			'P'
-#define CMD_CONTINUE		'C'
-#define CMD_CALIBRATE		'B'
-#define CMD_GET_DATA		'G'
-#define CMD_DRAW			'D'
-#define CMD_INTERACTIVE		'I'
-#define CMD_HOME			'H'
-#define CMD_VALIDATE 		'V'
+#define CMD_RESET          'R'
+#define CMD_PAUSE          'P'
+#define CMD_CONTINUE       'C'
+#define CMD_CALIBRATE      'B'
+#define CMD_GET_DATA       'G'
+#define CMD_DRAW           'D'
+#define CMD_INTERACTIVE    'I'
+#define CMD_HOME           'H'
+#define CMD_VALIDATE       'V'
 
 
 // Periods
 
-#define CMD_PERIOD			100
+#define CMD_PERIOD         100
 
 /*===========================================================================*/
 /* Module thread pointers.                                                   */
@@ -59,24 +57,17 @@ static thread_t* ptr_process_cmd;
 
 
 /**
- * @brief				Processes command and calls relevant module functions.
+ * @brief               Processes command and calls relevant module functions.
  *
- * @param[in] 	cmd 	Command. Possible commands listed in module constants.
+ * @param[in]   cmd     Command. Possible commands listed in module constants.
  */
 static void process_command(uint8_t cmd)
 {
 	switch(cmd) {
 		case CMD_RESET:
-//			palClearPad(GPIOD, GPIOD_LED1);
-//			chThdSleepMilliseconds(1000);
-//			palSetPad(GPIOD, GPIOD_LED1);
-//			chprintf((BaseSequentialStream *)&SDU1, "RESET \r \n");
-//			draw_reset();
 			data_free();
 			draw_stop_thd();
 			cal_stop_thd();
-//			SET MOTOR SPEED AT 0
-//			cal_set_init_length();
 			draw_reset();
 			draw_set_init_length(100);
 			break;
@@ -88,22 +79,12 @@ static void process_command(uint8_t cmd)
 			break;
 		case CMD_CALIBRATE:
 			cal_create_thd();
-//			color = data_get_color();
-//			draw_set_init_length(color[0]);
-//			height = get_initial_height_cm();
-//			chprintf((BaseSequentialStream *)&SDU1, "init height %f \r \n", height);
 			break;
 		case CMD_GET_DATA:
-			com_receive_data((BaseSequentialStream *)&SD3);
+			//capture_image()
 			break;
 		case CMD_DRAW:
-//			pos = data_get_pos();
-//			length = data_get_length();
-//			for(uint16_t i = 0; i<length;++i) {
-//				draw_move(pos[i].x, pos[i].y);
-//			}
 			draw_create_thd();
-//			cal_create_thd();
 			break;
 		case CMD_INTERACTIVE:
 			break;
@@ -111,11 +92,7 @@ static void process_command(uint8_t cmd)
 			draw_move(512, 0);
 			break;
 		case CMD_VALIDATE:
-//			cal_set_init_length();
 			cal_set_goal_distance();
-			break;
-		default:
-//			chprintf((BaseSequentialStream *)&SDU1, "Invalid command");
 			break;
 	}
 }
@@ -125,7 +102,7 @@ static void process_command(uint8_t cmd)
 /*===========================================================================*/
 
 /**
- * @brief	Thread for reading command from serial (SD3).
+ * @brief                Thread for reading command from serial (SD3).
  *
  */
 static THD_WORKING_AREA(wa_process_cmd, 1024);
@@ -147,7 +124,8 @@ static THD_FUNCTION(thd_process_cmd, arg)
 
 void create_thd_process_cmd(void)
 {
-	ptr_process_cmd = chThdCreateStatic(wa_process_cmd, sizeof(wa_process_cmd), NORMALPRIO+1, thd_process_cmd, NULL);
+	ptr_process_cmd = chThdCreateStatic(wa_process_cmd, sizeof(wa_process_cmd),
+	                                    NORMALPRIO+1, thd_process_cmd, NULL);
 }
 
 
