@@ -159,10 +159,9 @@ static thread_t* ptr_process_image;
 /*===========================================================================*/
 
 /**
- * @brief                       returns luma in hsl format from rgb values
+ * @brief                       classifies a color from its RGB values
  * @param[in]   rgb             rgb_color struct containing rgb information
- * @return                      lumina in range 0-1
- * @note                        https://en.wikipedia.org/wiki/HSL_and_HSV
+ * @return                      a color (white, black, red, green, blue)
  */
 static uint8_t classify_color(rgb_color rgb)
 {
