@@ -344,9 +344,12 @@ static void set_strong_pixel_colors(uint8_t* color)
 
 
 /**
- * @brief                       Depending on the gradient's angle, we know in which direction an edge thickens for all pixels.
- *                              Given that, we check if a pixel's gradient intensity is higher than both pixels located in its
- *                              corresponding octants. If it is the case, then we keep its value. If not, then we put it to 0.
+ * @brief                       Depending on the gradient's angle, we know in which
+ *                              direction an edge thickens for all pixels.
+ *                              Given that, we check if a pixel's gradient intensity
+ *                              is higher than both pixels located in its
+ *                              corresponding octants. If it is the case, then
+ *                              we keep its value. If not, then we put it to 0.
  * @param[in]      max          The maximum gradient intensity computed for an image.
  * @return                      none
  */
