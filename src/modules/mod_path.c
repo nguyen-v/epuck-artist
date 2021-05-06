@@ -82,6 +82,9 @@
  * to draw a straight line (mechanical constraint)
  */
 #define MAX_PIXEL_DIST     3
+#define KEEP               1
+#define REMOVE             0
+
 
 /*===========================================================================*/
 /* Module local variables.                                                   */
@@ -90,7 +93,7 @@
 static edge_pos* edges;
 static edge_track* contours;
 
-static uint8_t* res_out;
+static uint8_t* contours_to_remove;
 static struct edge_track* new_contour;
 
 static uint8_t* status;
@@ -482,16 +485,17 @@ static void set_contours_color(uint8_t* color, uint16_t size_edges)
  * @param[in]   end             end index of general and the subdivised contours
  * @param[out]  opt_contour     pointer to buffer containing index of redundant contours
  * @return                      none
- * @details                     if the maximum distance is superior to MAX_PERP_DIST, the contour is divided
- *	    						into 2 subcontours for which the start and end indexes are saved in their
- *	    						respective buffers. If the maximum distance is equal to zero, this means that
- *	    						the subcontour is linear and we keep one out of MAX_PIXEL_DIST pixel along the line.
- *	                            Finally if the maximum distance is inferior to zero, we cut all pixels between
- *                              the start and the end.
+ * @details                     if the maximum distance is superior to MAX_PERP_DIST,
+ *                              the contour is divided into 2 subcontours for which
+ *                              the start and end indexes are saved in their respective
+ *                              buffers. If the maximum distance is equal to zero,
+ *                              this means that the subcontour is linear and we keep
+ *                              one out of MAX_PIXEL_DIST pixel along the line.
+ *                              Finally if the maximum distance is inferior to zero,
+ *                              we cut all pixels between the start and the end.
  */
 static void contour_optimization(edge_track *contour, uint16_t start, uint16_t end,
                                   uint8_t* opt_contour){
-
 	uint16_t start_depth[(end-start)/2];
 	uint16_t end_depth[(end-start)/2];
 
@@ -499,7 +503,6 @@ static void contour_optimization(edge_track *contour, uint16_t start, uint16_t e
 	end_depth[0] = end;
 
 	uint16_t stack_count = 1;
-	uint16_t global_start = start;
 
 	float distance = 0;
 
@@ -515,7 +518,7 @@ static void contour_optimization(edge_track *contour, uint16_t start, uint16_t e
 		float dmax = 0;
 
 		for(uint16_t i = index+1; i < end; ++i){
-			if(opt_contour[i-global_start]){
+			if(opt_contour[i]){
 				distance = perpendicular_distance(contour[start].pos, contour[end].pos,
 				                                  contour[i].pos);
 				if(distance > dmax) {
@@ -535,19 +538,19 @@ static void contour_optimization(edge_track *contour, uint16_t start, uint16_t e
 		} else if(dmax == 0) {
 			uint16_t k = 0;
 			for(uint16_t i = start + 1; i < end;++i){
-				opt_contour[i - global_start] = 0 ;
+				opt_contour[i] = REMOVE;
 			}
 			while(k*MAX_PIXEL_DIST + start + 1 < end ){
-				opt_contour[start+k*MAX_PIXEL_DIST] = 1;
+				opt_contour[start+k*MAX_PIXEL_DIST] = KEEP;
 				++k;
 				}
 			if(!((k-1)*MAX_PIXEL_DIST+start == end)){
-				opt_contour[end] = 1;
+				opt_contour[end] = KEEP;
 				++k;
 				}
 		} else {
 			for(uint16_t i = start + 1; i < end;++i){
-				opt_contour[i - global_start] = 0 ;
+				opt_contour[i] = REMOVE;
 			}
 		}
 	}
@@ -584,10 +587,10 @@ static uint16_t path_optimization(edge_track* contours, edge_pos* edges,
 			}
 
 			new_contour = malloc(length*sizeof(struct edge_track));
-			res_out = malloc(length*sizeof(uint8_t));
+			contours_to_remove = malloc(length*sizeof(uint8_t));
 
 			for(uint8_t m = 0; m < length; ++m){
-				res_out[m] = 1;
+				contours_to_remove[m] = KEEP;
 			}
 
 			for(uint16_t n = 0; n < length; ++n){
@@ -595,10 +598,10 @@ static uint16_t path_optimization(edge_track* contours, edge_pos* edges,
 			}
 
 			contours_size += length;
-			contour_optimization(new_contour, 0, length-1, res_out);
+			contour_optimization(new_contour, 0, length-1, contours_to_remove);
 
 			for(uint8_t j = 0; j < length; ++j){
-				if(res_out[j] == 1){
+				if(contours_to_remove[j] == KEEP){
 				contours[opt_contours_size] = new_contour[j];
 				++opt_contours_size;
 				}
@@ -610,7 +613,7 @@ static uint16_t path_optimization(edge_track* contours, edge_pos* edges,
 				++contours_size;
 			}
 			free(new_contour);
-			free(res_out);
+			free(contours_to_remove);
 		}
 	}
 	return opt_contours_size;

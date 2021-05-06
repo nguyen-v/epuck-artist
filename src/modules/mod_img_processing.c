@@ -181,7 +181,7 @@ static uint8_t classify_color(rgb_color rgb)
 }
 
 /**
- * @brief						converts an rgb565 color to a grayscale image
+ * @brief                       converts an rgb565 color to a grayscale image
  * @param[out]  color           pointer to buffer containing path color
  * @return                      none
  */
@@ -207,9 +207,10 @@ static void set_grayscale_filter_colors(uint8_t* color)
 }
 
 /**
- * @brief     Filters out obvious noise and smoothens the image.
- * @return    none
- * @note      A 5x5 Gaussian filter was chosen with a standard deviation of 1.
+ * @brief                       Filters out obvious noise and smoothens the image.
+ * @return                      none
+ * @note                        A 5x5 Gaussian filter was chosen with a standard
+ *                              deviation of 1.
  */
 static void gaussian_filter(void)
 {
@@ -237,8 +238,10 @@ static void gaussian_filter(void)
 }
 
 /**
- * @brief                       The sobel filter emphasizes edges by computing the norm of the gradient of the image intensity
- *                              for each pixel. From these values, we can also extract the gradient's angle from this function
+ * @brief                       The sobel filter emphasizes edges by computing
+ *                              the norm of the gradient of the image intensity
+ *                              for each pixel. From these values, we can also
+ *                              extract the gradient's angle from this function
  *                              and use it later for edge thinning.
  * @return        max           The maximum gradient intensity computed for an image.
  */
@@ -291,9 +294,10 @@ static float sobel_filter(void)
 }
 
 /**
- * @brief                       Sets the color at the edge to the color inside the shape that the edge is encircling.
- *                              This is possible for the sobel_angle_state points to the interior of
- *                              a shape.
+ * @brief                       Sets the color at the edge to the color inside
+ *                              the shape that the edge is encircling.
+ *                              This is possible for the sobel_angle_state points
+ *                              to the interior of a shape.
  * @param[out]     color        Pointer to buffer containing path color
  * @return                      none
  */
@@ -390,8 +394,10 @@ static void local_max_supression(float max)
 }
 
 /**
- * @brief    Compares the gradient intensity of all pixels to selected threshold values and
- *           separates them into 3 categories : Strong pixels, Weak pixels and Background pixels.
+ * @brief                       Compares the gradient intensity of all pixels to
+ *                              selected threshold values and
+ *                              separates them into 3 categories : Strong pixels,
+ *                              Weak pixels and Background pixels.
  * @return   none
  */
 static void double_threshold(void)
@@ -413,9 +419,10 @@ static void double_threshold(void)
 
 
 /**
- * @brief    Checks if weak pixels are near a strong pixels. If it is the case, then they are turned into strong pixels.
- * 			 Otherwise, they are turned to background pixels.
- * @return   none
+ * @brief                       Checks if weak pixels are near a strong pixels.
+ *                              If it is the case, then they are turned into strong pixels.
+ *                              Otherwise, they are turned to background pixels.
+ * @return                      none
  */
 static void edge_track_hyst(void)
 {
@@ -449,8 +456,8 @@ static void edge_track_hyst(void)
 }
 
 /**
- * @brief   Fills the image with background pixels
- * @return  none
+ * @brief                       Fills the image with background pixels
+ * @return                      none
  */
 static void fill_background(void)
 {
@@ -464,8 +471,8 @@ static void fill_background(void)
 }
 
 /**
- * @brief   Removes removes image borders (width = MARGIN_PX)
- * @return  none
+ * @brief                       Removes removes image borders (width = MARGIN_PX)
+ * @return                      none
  */
 static void remove_borders(void)
 {
@@ -503,8 +510,8 @@ static void remove_borders(void)
 }
 
 /**
- * @brief   Removes pixels that don't have any neighbours
- * @return  none
+ * @brief                        Removes pixels that don't have any neighbours
+ * @return                       none
  */
 static void remove_unique_px(void)
 {
@@ -527,13 +534,14 @@ static void remove_unique_px(void)
 
 
 /**
- * @brief	canny edge detection algorithm on img_buffer
- * @return  none
- * @detail	this algorithm performs canny edge detection on an image buffer
- *          obtained by the camera. The resulting buffers are a buffer of
- *          size IM_LENGTH_PX * IM_HEIGHT_PX containing edges of img_buffer.
- *          Active pixels take the value of IM_MAX_VALUE and inactive pixels
- *          take a value of 0.
+ * @brief                         canny edge detection algorithm on img_buffer
+ * @return                        none
+ * @detaiL                        this algorithm performs canny edge detection
+ *                                on an image buffer obtained by the camera.
+ *                                The resulting buffers are a buffer of size
+ *                                IM_LENGTH_PX * IM_HEIGHT_PX containing edges
+ *                                of img_buffer. Active pixels take the value of
+ *                                IM_MAX_VALUE and inactive pixels take a value of 0.
  */
 static void canny_edge(void){
 
