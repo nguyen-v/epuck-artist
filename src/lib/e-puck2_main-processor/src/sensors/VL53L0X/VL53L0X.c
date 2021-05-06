@@ -19,9 +19,21 @@ static uint16_t dist_mm_kalman = 0;
 static thread_t *distThd;
 static bool VL53L0X_configured = false;
 
+#define OBSERVED_NOISE_COVARIANCE 6.5f
+
+
+/**
+ * @brief               1D Kalman filter
+ *
+ * @return              filtered value
+ * @note                Kalman filter is defined in VL53L0X.c because we want
+ *                      it to be ready (i.e. running) alongside the thread
+ *                      defined in the same file (because values need to be
+ *                      stable when accessed).
+ */
 static uint16_t kalman1d(uint16_t U)
 {
-	static const float R = 6.5;		// covariance of observation noise
+	static const float R = OBSERVED_NOISE_COVARIANCE;
 	static const float H = 1.00;		// observation model
 	static float Q = 1.0;				// initial estimated covariance
 	static float P = 0;				// initial error covariance
