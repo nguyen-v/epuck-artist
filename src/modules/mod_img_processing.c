@@ -604,8 +604,8 @@ static THD_FUNCTION(thd_capture_image, arg) {
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
 
-    while(1){
-    	chBSemWait(&sem_capture_image);
+	while(1){
+		chBSemWait(&sem_capture_image);
 		dcmi_capture_start();
 		wait_image_ready();
 		chBSemSignal(&sem_image_captured);
@@ -619,11 +619,12 @@ static THD_FUNCTION(thd_process_image, arg) {
 
 	chRegSetThreadName(__FUNCTION__);
 	(void)arg;
+
 	while(1){
-	chBSemWait(&sem_image_captured);
-	img_buffer = dcmi_get_last_image_ptr();
-	canny_edge();
-	path_planning();
+		chBSemWait(&sem_image_captured);
+		img_buffer = dcmi_get_last_image_ptr();
+		canny_edge();
+		path_planning();
 	}
 }
 
