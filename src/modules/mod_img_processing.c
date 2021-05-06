@@ -35,6 +35,7 @@
 
 // Convolution offsets
 #define XY_OFFSET_5x5      2
+#define XY_OFFSET_3x3      1
 
 #define MARGIN_PX          4
 
@@ -122,7 +123,9 @@
 #define CAMERA_Y_POS       0
 
 
+
 #define KER_DIV 159
+
 const uint8_t Gaus5x5[] = { 2,  4,  5,  4,  2,
                             4,  9,  12, 9,  4,
                             5,  12, 15, 12, 5,
