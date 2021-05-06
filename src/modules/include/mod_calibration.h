@@ -34,5 +34,10 @@ void cal_set_goal_distance(void);
  */
 bool cal_get_state(void);
 
+/**
+ * @brief                        Signals that color has changed
+ * @return                       none
+ */
+void cal_signal_changed_colors(void);
 
 #endif /* _MOD_CALIBRATION_H_ */
