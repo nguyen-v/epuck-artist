@@ -54,6 +54,12 @@ static bool is_drawing = false;
 static bool is_paused = false;
 
 /*===========================================================================*/
+/* Semaphores.                                                               */
+/*===========================================================================*/
+
+static BSEMAPHORE_DECL(sem_changed_color, TRUE);
+
+/*===========================================================================*/
 /* Module thread pointers.                                                   */
 /*===========================================================================*/
 
@@ -134,7 +140,7 @@ static THD_FUNCTION(thd_draw, arg)
 		if (color[i] != prev_color) {
 			com_request_color(color[i]);
 			prev_color = color[i];
-			draw_pause_thd();
+			chBSemWait(&sem_changed_color);
 		}
 
 		chSysLock();
@@ -168,7 +174,7 @@ void draw_reset(void)
 
 void draw_create_thd(void)
 {
-	if (!is_drawing) {
+	if (!is_drawing && data_get_state()) {
 		ptr_draw = chThdCreateStatic(wa_draw, sizeof(wa_draw), NORMALPRIO,
 		                             thd_draw, NULL);
 		is_drawing = true;
@@ -179,6 +185,7 @@ void draw_stop_thd(void)
 {
 	if(is_drawing) {
 		chThdTerminate(ptr_draw);
+		chThdWait(ptr_draw);
 		is_drawing = false;
 		is_paused = false;
 	}
@@ -198,6 +205,12 @@ void draw_resume_thd(void)
 	  is_paused = false;
 	}
 	chSysUnlock();
+}
+
+void draw_signal_changed_colors(void)
+{
+	if (is_drawing)
+		chBSemSignal(&sem_changed_color);
 }
 
 bool draw_get_state(void)

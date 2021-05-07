@@ -48,6 +48,12 @@ void draw_pause_thd(void);
 void draw_resume_thd(void);
 
 /**
+ * @brief            Signals that color has changed
+ * @return           none
+ */
+void draw_signal_changed_colors(void);
+
+/**
  * @brief            Returns current thread state
  * @return           True if currently drawing, false otherwise
  */
