@@ -16,6 +16,9 @@ CSRC += ./main.c \
 		./modules/mod_state.c \
 		./modules/mod_sensors.c \
 		./modules/mod_calibration.c \
+		./modules/mod_path.c \
+		./modules/mod_img_processing.c \
+		./modules/tools.c \
 		
 
 #Header folders to include

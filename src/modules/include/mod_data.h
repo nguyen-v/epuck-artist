@@ -61,6 +61,11 @@ uint16_t data_get_length(void);
  */
 void data_free(void);
 
+void data_free_pos(void);
+
+void data_free_color(void);
+
+
 /**
  * @brief               Allocates memory for the position buffer.
  *
@@ -80,6 +85,15 @@ cartesian_coord* data_alloc_xy(uint16_t length);
 uint8_t* data_alloc_color(uint16_t length);
 
 /**
+ * @brief				Rellocates memory for the color buffer.
+ *
+ * @param[in] 	length 	Length (number of coordinates)
+ * @return				Pointer to color buffer.
+ * 						NULL if allocation failed.
+ */
+uint8_t* data_realloc_color(uint16_t length);
+
+/**
  * @brief               Sets data status to either ready or not ready
  * @param[in]   state   State of data
  * @return              none
@@ -92,4 +106,4 @@ void data_set_ready(bool state);
  */
 bool data_get_state(void);
 
-#endif /* _MOD_DATA_H_ */
+#endif

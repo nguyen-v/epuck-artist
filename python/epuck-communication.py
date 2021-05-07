@@ -234,6 +234,168 @@ def receive_image(ser):
     im.show(title=nameimg)
     im.save("C:/Users/41786/Desktop/Projects/BA-6/SE/img" + ".png", "PNG")
 
+def receive_image(ser):
+    state = 0
+
+    while(state != 5):
+        #reads 1 byte
+        c1 = ser.read(1)
+        #timeout condition
+        if(c1 == b''):
+            return [];
+
+        if(state == 0):
+            if(c1 == b'S'):
+                state = 1
+            else:
+                state = 0
+        elif(state == 1):
+            if(c1 == b'T'):
+                state = 2
+            elif(c1 == b'S'):
+                state = 1
+            else:
+                state = 0
+        elif(state == 2):
+            if(c1 == b'A'):
+                state = 3
+            elif(c1 == b'S'):
+                state = 1
+            else:
+                state = 0
+        elif(state == 3):
+            if(c1 == b'R'):
+                state = 4
+            elif (c1 == b'S'):
+                state = 1
+            else:
+                state = 0
+        elif(state == 4):
+            if(c1 == b'T'):
+                state = 5
+            elif (c1 == b'S'):
+                state = 1
+            else:
+                state = 0
+
+    print("Receiving image")
+
+    msg = ser.readline().decode("utf_8")
+    print(msg)
+    length = struct.unpack('<h',ser.read(2))  # length is sent as an uint16
+    length = length[0]
+    print("length" + str(length))
+
+    x_buffer = b''
+    y_buffer = b''
+    c_buffer = b''
+
+    x_buffer = ser.read(length)
+    y_buffer = ser.read(length)
+    c_buffer = ser.read(length)
+
+    c_buffer += b'\x00'
+    i = 0
+    for i in range(0, length):
+        # print("%d x %d " %(i, x_buffer[i]))
+        print("%d x %d y %d C %d" % (i, x_buffer[i], y_buffer[i], c_buffer[i]))
+
+    f = open("out.svg",'w')
+    f.write(makesvg(x_buffer, y_buffer, c_buffer, length))
+    f.close()
+    
+#     toRead = 4000
+#     rcv_buffer = b''
+#     # print(rcv_buffer)
+#     # print(len(rcv_buffer))
+#     #reads the data
+#     i = 0
+#     # while i < toRead:
+#     #     print(ser.read())
+#     #     i +=1
+
+# # WORKING 90X100 rgb
+#     rcv_buffer += ser.read(toRead)
+#     rcv_buffer += ser.read(toRead)
+#     rcv_buffer += ser.read(toRead)
+#     rcv_buffer += ser.read(toRead)
+#     rcv_buffer += ser.read(2000)
+
+#     # rcv_buffer += ser.read(toRead)
+#     # rcv_buffer += ser.read(toRead)
+#     # rcv_buffer += ser.read(1000)
+
+#     new_buffer = bytearray(len(rcv_buffer))
+#     new_buffer[0::2] = rcv_buffer[1::2]
+#     new_buffer[1::2] = rcv_buffer[0::2]
+#     im = Image.frombytes("RGB", (100, 90), bytes(new_buffer), "raw", "BGR;16")
+#     # im = Image.frombytes("L", (100, 90), bytes(rcv_buffer), "raw")
+#     nameimg ="Image"
+#     im.show(title=nameimg)
+#     im.save("C:/Users/41786/Desktop/Projects/BA-6/SE/img" + ".png", "PNG")
+
+def makesvg(x_buffer, y_buffer, c_buffer, length):
+    out = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="180" version="1.1">\n'
+    polyline = ''
+    comma = ''
+    color = "black"
+    for i in range(1, length):
+        # l = ",".join([str(x_buffer[i])+","+str(y_buffer[i]) for p in l])
+        if c_buffer[i] != 0:
+            comma = ","
+        else:
+            comma = ''
+
+        polyline += comma+str(x_buffer[i])+","+str(y_buffer[i])
+        if c_buffer[i] == 0:
+            print("0")
+            if c_buffer[i+1] == 1:
+                color = "black"
+            elif c_buffer[i+1] == 2:
+                color = "red"
+            elif c_buffer[i+1] == 3:
+                color = "green"
+            elif c_buffer[i+1] == 4:
+                color = "blue"
+
+        if c_buffer[i+1] == 0:
+            out += '<polyline points="'+ polyline +'" stroke="'+ color +'" stroke-width="2" fill="none" />\n'
+            polyline = ""
+    out += '</svg>'
+    return out
+
+
+
+#     toRead = 4000
+#     rcv_buffer = b''
+#     # print(rcv_buffer)
+#     # print(len(rcv_buffer))
+#     #reads the data
+#     i = 0
+#     # while i < toRead:
+#     #     print(ser.read())
+#     #     i +=1
+
+# # WORKING 90X100 rgb
+#     # rcv_buffer += ser.read(toRead)
+#     # rcv_buffer += ser.read(toRead)
+#     # rcv_buffer += ser.read(toRead)
+#     # rcv_buffer += ser.read(toRead)
+#     # rcv_buffer += ser.read(2000)
+
+#     rcv_buffer += ser.read(toRead)
+#     rcv_buffer += ser.read(toRead)
+#     rcv_buffer += ser.read(1000)
+
+#     new_buffer = bytearray(len(rcv_buffer))
+#     # new_buffer[0::2] = rcv_buffer[1::2]
+#     # new_buffer[1::2] = rcv_buffer[0::2]
+#     # im = Image.frombytes("RGB", (100, 90), bytes(new_buffer), "raw", "BGR;16")
+#     im = Image.frombytes("L", (100, 90), bytes(rcv_buffer), "raw")
+#     nameimg ="Image"
+#     im.show(title=nameimg)
+#     im.save("C:/Users/41786/Desktop/Projects/BA-6/SE/img" + ".png", "PNG")
+
 def parse_arg():
     port = SERIAL_PORT_DEFAULT
     if len(sys.argv) == 1:

@@ -71,6 +71,23 @@ void data_free(void)
 	color = NULL;
 }
 
+void data_free_pos(void)
+{
+	if (pos != NULL)
+		free(pos);
+	data_length = 0;
+	pos = NULL;
+}
+
+void data_free_color(void)
+{
+	if (color != NULL)
+		free(color);
+//	data_length = 0;
+	color = NULL;
+}
+
+
 cartesian_coord* data_alloc_xy(uint16_t length)
 {
 	uint16_t temp_length = length;
@@ -103,12 +120,26 @@ uint8_t* data_alloc_color(uint16_t length)
 	return color;
 }
 
-void data_set_ready(bool state)
+uint8_t* data_realloc_color(uint16_t length)
 {
+	uint16_t temp_length = length;
+	if(length > MAX_LENGTH) {
+		temp_length = MAX_LENGTH;
+	}
+
+	color = (uint8_t*)realloc(color, temp_length*sizeof(uint8_t));
+
+	if(color == NULL) {
+		return color;
+	}
+
+	return color;
+}
+
+void data_set_ready(bool state) {
 	data_is_ready = state;
 }
 
-bool data_get_state(void)
-{
+bool data_get_state(void) {
 	return data_is_ready;
 }
