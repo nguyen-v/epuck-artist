@@ -151,7 +151,6 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 
 	// reset data information and free buffers
 	data_free();
-	data_set_ready(false);
 
 	// get length of incoming data
 	c1 = chSequentialStreamGet(in);
@@ -234,12 +233,11 @@ void com_send_data(BaseSequentialStream* out, uint8_t* data, uint16_t size,
 	uint16_t length = size;
 	if (size > MAX_BUFFER_SIZE) {
 		while (length > MAX_BUFFER_SIZE) {
-			chSequentialStreamWrite(out, (uint8_t*)data,
-			                        sizeof(uint8_t) * MAX_BUFFER_SIZE);
+			chSequentialStreamWrite(out, data, sizeof(uint8_t) * MAX_BUFFER_SIZE);
 			length -= MAX_BUFFER_SIZE;
 		}
 	} else {
-		chSequentialStreamWrite(out, (uint8_t*)data, sizeof(uint8_t) * length);
+		chSequentialStreamWrite(out, data, sizeof(uint8_t) * length);
 	}
 }
 
