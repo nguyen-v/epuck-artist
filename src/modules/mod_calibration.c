@@ -41,7 +41,7 @@
 #define CALIBRATION_STEPS          200
 #define CALIBRATION_PERIOD         100     // ms
 #define CALIBRATION_SQ_PX          100     // distance between calibration points
-                                            // in pixels
+                                           // in pixels
 
 #define KP                         10.f    // Proportional controller coefficient
 #define TOF_DISTANCE_MIN           150     // mm
@@ -72,7 +72,7 @@
 #define LENGTH_DIST_SLOPE          52.7f   // found by linear regression
 #define LENGTH_DIST_INTERCEPT      -14.5f  // found by linear regression
 #define CORRECTION_FACTOR          0.92f   // to compensate model error when
-                                            // setting initial length
+                                           // setting initial length
 
 // distance measured by TOF sensor has to be multiplied by this factor because
 // the epuck is not completely parallel to the wall (found by linear regression)

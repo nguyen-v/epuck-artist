@@ -1,7 +1,6 @@
 /**
  * @file    mod_draw.c
  * @brief   Module for moving the robot to XY coordinates.
- * @note
  */
 
 // C standard header files
@@ -36,10 +35,10 @@
 #define MAX_SPEED              250    // steps/s
 
 #define STEP_THRESHOLD         5      // defines how close we should get to
-                                       // goal length in steps
+                                      // goal length in steps
 
 #define TIME_SLEEP_MIN         20     // ms motors dont have time to react if
-                                       // too low
+                                      // too low
 #define DEFAULT_HEIGHT         100.0f // cm
 
 /*===========================================================================*/

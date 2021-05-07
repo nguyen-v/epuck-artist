@@ -1,7 +1,6 @@
 /**
  * @file    mod_data.c
  * @brief   Module for memory allocation of data.
- * @note
  */
 
 // C standard header files

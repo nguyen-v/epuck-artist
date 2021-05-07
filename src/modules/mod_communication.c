@@ -1,7 +1,7 @@
 /**
  * @file    mod_communication.c
  * @brief   E-puck 2 communication to computer (e-puck side).
- * @note 	Data is received and sent in little endian
+ * @note    Data is received and sent in little endian
  */
 
 // C standard header files
