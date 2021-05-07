@@ -25,6 +25,7 @@ MAX_BUFFER_LENGTH           = 4000
 # Error, timeout
 TIMEOUT_PERIOD              = 1
 ERROR_COUNT_MAX             = 10
+ARDUINO_ERR_COUNT_MAX       = 50
 
 # Periods
 READ_PERIOD                 = 0.1
@@ -39,6 +40,7 @@ COMMANDS = (
     'R'     ,   # RESET
     'P'     ,   # PAUSE
     'C'     ,   # CONTINUE
+    'S'     ,   # SIGNAL COLOR CHANGE
     'B'     ,   # BEGIN CALIBRATION
     'G'     ,   # GET DATA
     'D'     ,   # DRAW
@@ -52,12 +54,13 @@ CMD_INDEX = {
     'R' : 0    ,
     'P' : 1    ,   
     'C' : 2    ,  
-    'B' : 3    ,   
-    'G' : 4    ,   
-    'D' : 5    ,   
-    'I' : 6    ,   
-    'H' : 7    , 
-    'V' : 8    
+    'S' : 3    ,     
+    'B' : 4    ,   
+    'G' : 5    ,   
+    'D' : 6    ,   
+    'I' : 7    ,   
+    'H' : 8    , 
+    'V' : 9    
 }
 
 CMD_HEADER = [b'' for x in range(len(COMMANDS))]
@@ -141,15 +144,14 @@ def receive_data(ser_epuck, ser_arduino):
             ser_arduino.write(output_buffer)
             conf_msg = ""
             error_count = 0
-            while CONFIRMATION_MSG not in conf_msg and error_count < ERROR_COUNT_MAX:
+            while CONFIRMATION_MSG not in conf_msg and error_count < ARDUINO_ERR_COUNT_MAX:
                 conf_msg = ser_arduino.readline().decode("utf_8")
                 error_count += 1
-                if CONFIRMATION_MSG in conf_msg or error_count == ERROR_COUNT_MAX:
-                    time.sleep(0.5)
+                if CONFIRMATION_MSG in conf_msg or error_count == ARDUINO_ERR_COUNT_MAX:
+                    time.sleep(0.2)
                     print("Arduino has finished changing colors.")
-                    send_command(ser_epuck, "C")
-
-        time.sleep(0.5)
+                    send_command(ser_epuck, "S")
+        time.sleep(0.1)
 
 
 
@@ -339,7 +341,7 @@ def request_command(ser_epuck, ser_arduino):
 
 def get_data():
     # data_color = np.array([0, 4, 6], dtype = np.uint8)                               # rewrite
-    data_color = np.array([0, 1, 2, 3, 4], dtype = np.uint8)                               # rewrite
+    data_color = np.array([0, 1, 0, 3, 4, 2], dtype = np.uint8)                               # rewrite
     # data_pos = np.array([[430, 0]], dtype = np.uint16)
     # data_pos = np.array([[512, 0], [612, 0], [612, 50], [512, 50], [512, 0]], dtype = np.uint16) # 2 squares
     # data_pos = np.array([[512, 0], [463, 0],[467, 26], [461, 49], [435, 89],[415, 138], [404, 158], [417, 164], [448, 139], [450, 104], [449, 154], [455, 187], [481, 186], [477, 163], [474, 284], [487, 294], [500, 289], [502, 268], [482, 268], [481, 263], [481, 285], [494, 285], [481, 263],[494, 269], [501, 267], [508, 188], [516, 160], [509, 188], [534, 186],[553, 152], [541, 175], [568, 157], [568, 127], [542, 59], [544, 0], [512, 0]], dtype = np.uint16)
@@ -353,7 +355,7 @@ def get_data():
     # data_pos = np.array([[512, 0], [512, 100], [512, 200],[412, 200], [312, 200], [312, 100],[312, 0],[412, 0],[512, 0]], dtype = np.uint16) # LEFT square test
     # data_pos = np.array([[512, 0], [512, 100], [612, 100], [612, 0], [512, 0]], dtype = np.uint16) # RIGHT square test
     # data_pos = np.array([[512, 0], [612, 0], [612, 100], [612, 200], [512, 200], [412, 200], [412,100], [412, 0], [512, 0]], dtype = np.uint16) # RIGHT square test    
-    data_pos = np.array([[512, 0], [612, 100], [512, 200], [412,100], [512, 0]], dtype = np.uint16) # TILTED square test    
+    data_pos = np.array([[100, 0], [200, 0], [200, 200], [0, 200], [0, 0],[100, 0]], dtype = np.uint16) # TILTED square test    
     # data_pos = np.array([[512, 0],[512, 150]], dtype = np.uint16) # going down
     # data_pos = np.array([[480, 0]], dtype = np.uint16) # y test
     
@@ -402,10 +404,6 @@ def main():
     port = parse_arg()
     ser_epuck = connect_to_port(port, SERIAL_BAUD_RATE, True)
     ser_arduino = connect_to_port("COM22", BT_BAUD_RATE, False)
-
-    # read_arduino = threading.Thread(target = read_serial, args = (ser2,))
-    # read_arduino.setDaemon(True)
-    # read_arduino.start()
 
     request_cmd = threading.Thread(target = request_command, args = (ser_epuck, ser_arduino))
     request_cmd.setDaemon(True)

@@ -23,6 +23,7 @@
 #include <mod_communication.h>
 #include <mod_data.h>
 #include <mod_calibration.h>
+#include <def_epuck_field.h>
 
 /*===========================================================================*/
 /* Module constants.                                                         */
@@ -33,6 +34,7 @@
 #define CMD_RESET          'R'
 #define CMD_PAUSE          'P'
 #define CMD_CONTINUE       'C'
+#define CMD_SIGNAL_COLOR   'S'
 #define CMD_CALIBRATE      'B'
 #define CMD_GET_DATA       'G'
 #define CMD_DRAW           'D'
@@ -65,33 +67,39 @@ static void process_command(uint8_t cmd)
 {
 	switch(cmd) {
 		case CMD_RESET:
-			data_free();
 			draw_stop_thd();
 			cal_stop_thd();
+			cal_stop_home_thd();
+			draw_move(X_DEFAULT, Y_DEFAULT);
 			draw_reset();
-			draw_set_init_length(100);
 			break;
 		case CMD_PAUSE:
 			draw_pause_thd();
 			break;
 		case CMD_CONTINUE:
 			draw_resume_thd();
+			break;
+		case CMD_SIGNAL_COLOR:
 			cal_signal_changed_colors();
+			draw_signal_changed_colors();
 			break;
 		case CMD_CALIBRATE:
-			cal_create_thd();
+			if ((draw_get_state() || cal_get_home_state()) == false)
+				cal_create_thd();
 			break;
 		case CMD_GET_DATA:
 			//capture_image()
 			com_receive_data((BaseSequentialStream *)&SD3);
 			break;
 		case CMD_DRAW:
-			draw_create_thd();
+			if ((cal_get_state() || cal_get_home_state()) == false)
+				draw_create_thd();
 			break;
 		case CMD_INTERACTIVE:
 			break;
 		case CMD_HOME:
-			draw_move(512, 0);
+			if ((draw_get_state() || cal_get_state()) == false)
+				cal_create_home_thd();
 			break;
 		case CMD_VALIDATE:
 			cal_set_goal_distance();
