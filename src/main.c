@@ -22,6 +22,7 @@
 #include <mod_sensors.h>
 #include <mod_draw.h>
 #include <mod_communication.h>
+#include <mod_calibration.h>
 #include <mod_data.h>
 #include <mod_state.h>
 
@@ -51,6 +52,7 @@ static void init_all(void)
 int main(void)
 {
 	init_all();
+	draw_set_init_length(DEFAULT_HEIGHT_CM);
 	create_thd_process_cmd();
 	while(1) {
 		chThdSleepMilliseconds(100);
