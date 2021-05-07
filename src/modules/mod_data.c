@@ -1,13 +1,12 @@
 /**
  * @file    mod_data.c
  * @brief   Module for memory allocation of data.
- * @note
  */
 
 // C standard header files
 
 #include <stdint.h>
-#include <stdbool.h>
+//#include <stdbool.h>
 #include <stdlib.h>
 
 // Module headers
@@ -18,9 +17,9 @@
 /* Module constants.                                                         */
 /*===========================================================================*/
 
-#define MAX_ALLOCATED_DATA	100000 // max size in bytes for data structures
-#define SIZE_OF_DATA		sizeof(cartesian_coord) + sizeof(uint8_t)
-#define MAX_LENGTH			MAX_ALLOCATED_DATA/SIZE_OF_DATA
+#define MAX_ALLOCATED_DATA   100000 // max size in bytes for data structures
+#define SIZE_OF_DATA         (sizeof(cartesian_coord) + sizeof(uint8_t))
+#define MAX_LENGTH           (MAX_ALLOCATED_DATA/SIZE_OF_DATA)
 
 /*===========================================================================*/
 /* Module local variables.                                                   */
@@ -29,6 +28,7 @@
 static cartesian_coord* pos = NULL;
 static uint8_t* color = NULL;	// not in cartesian_coord to avoid padding
 static uint16_t data_length = 0;
+static bool data_is_ready = false;
 
 /*===========================================================================*/
 /* Module exported functions.                                                */
@@ -65,6 +65,7 @@ void data_free(void)
 		free(pos);
 	if (color != NULL)
 		free(color);
+	data_is_ready = false;
 	data_length = 0;
 	pos = NULL;
 	color = NULL;
@@ -74,6 +75,7 @@ void data_free_pos(void)
 {
 	if (pos != NULL)
 		free(pos);
+	data_is_ready = false;
 	data_length = 0;
 	pos = NULL;
 }
@@ -82,6 +84,7 @@ void data_free_color(void)
 {
 	if (color != NULL)
 		free(color);
+	data_is_ready = false;
 //	data_length = 0;
 	color = NULL;
 }
@@ -102,7 +105,6 @@ cartesian_coord* data_alloc_xy(uint16_t length)
 
 	return pos;
 }
-
 
 uint8_t* data_alloc_color(uint16_t length)
 {
@@ -134,4 +136,12 @@ uint8_t* data_realloc_color(uint16_t length)
 	}
 
 	return color;
+}
+
+void data_set_ready(bool state) {
+	data_is_ready = state;
+}
+
+bool data_get_state(void) {
+	return data_is_ready;
 }
