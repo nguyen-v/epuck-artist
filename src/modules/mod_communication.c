@@ -1,7 +1,7 @@
 /**
  * @file    mod_communication.c
  * @brief   E-puck 2 communication to computer (e-puck side).
- * @note 	Data is received and sent in little endian
+ * @note    Data is received and sent in little endian
  */
 
 // C standard header files
@@ -12,8 +12,8 @@
 
 #include "hal.h"
 #include "ch.h"
-#include <usbcfg.h>		// usb debug messages
-#include "chprintf.h" 	// usb debug messages
+#include <usbcfg.h>
+#include "chprintf.h"
 
 // Module headers
 
@@ -25,20 +25,10 @@
 /*===========================================================================*/
 
 #define SERIAL_BIT_RATE			115200
+#define MAX_BUFFER_SIZE			4000
 
 /*===========================================================================*/
-/* Module local variables.                                                   */
-/*===========================================================================*/
-
-static bool data_is_ready = false;
-
-/*===========================================================================*/
-/* Module mutexes, semaphores.                                               */
-/*===========================================================================*/
-//MUTEX_DECL(serial_mtx);
-
-/*===========================================================================*/
-/* Module exported functions.                                                   */
+/* Module exported functions.                                                */
 /*===========================================================================*/
 
 void com_serial_start(void)
@@ -51,11 +41,6 @@ void com_serial_start(void)
 	};
 
 	sdStart(&SD3, &ser_cfg); // UART3.
-}
-
-bool data_ready(void)
-{
-	return data_is_ready;
 }
 
 uint8_t com_receive_command(BaseSequentialStream* in)
@@ -89,6 +74,39 @@ uint8_t com_receive_command(BaseSequentialStream* in)
 		}
 	}
 	return c = chSequentialStreamGet(in); // parses the command
+}
+
+uint8_t com_receive_length(BaseSequentialStream* in)
+{
+	volatile uint8_t c;
+	uint8_t state = 0;
+
+	while(state != 3) {
+		c = chSequentialStreamGet(in);
+
+		switch(state) {
+			case 0:
+				if(c == 'L')
+					state = 1;
+				else
+					state = 0;
+			case 1:
+				if(c == 'E')
+					state = 2;
+				else if(c == 'L')
+					state = 1;
+				else
+					state = 0;
+			case 2:
+				if(c == 'N')
+					state = 3;
+				else if (c == 'L')
+					state = 1;
+				else
+					state = 0;
+		}
+	}
+	return c = chSequentialStreamGet(in); // parses length
 }
 
 
@@ -131,11 +149,8 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 		}
 	}
 
-	chprintf((BaseSequentialStream *)&SDU1, "Data detected \r \n");
-
 	// reset data information and free buffers
 	data_free();
-	data_is_ready = false;
 
 	// get length of incoming data
 	c1 = chSequentialStreamGet(in);
@@ -151,14 +166,9 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 	uint8_t* color = data_alloc_color(length);
 
 	if (pos == NULL || color == NULL) {
-		data_is_ready = false;
-//		chprintf((BaseSequentialStream *)&SDU1, "Allocation failed \r \n");
+		data_set_ready(false);
 		return 0;
 	}
-
-//	chprintf((BaseSequentialStream *)&SDU1, "Position and color buffers allocated, length = %d \r \n", length);
-//	chprintf((BaseSequentialStream *)&SDU1, "Size in bytes of color buffer = %d \r \n", length*sizeof(uint8_t));
-//	chprintf((BaseSequentialStream *)&SDU1, "Size in bytes of position buffer = %d \r \n", length*sizeof(cartesian_coord));
 
 	//	fill the position and color buffers
 	for(uint16_t i = 0; i < length; ++i) {
@@ -172,17 +182,113 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 		c1 = chSequentialStreamGet(in);
 		c2 = chSequentialStreamGet(in);
 		pos[i].y = (uint16_t)((c1 | c2<<8));
-
-//		chprintf((BaseSequentialStream *)&SDU1, "c=%d \r \n", color[i]);
-//		chprintf((BaseSequentialStream *)&SDU1, "x=%d \r \n", pos[i].x);
-//		chprintf((BaseSequentialStream *)&SDU1, "y=%d \r \n", pos[i].y);
 	}
 
-	data_is_ready = true;
+	data_set_ready(true);
 	return length;
 }
 
 
+void com_send_data(BaseSequentialStream* out, uint8_t* data, uint16_t size,
+                   message_type msg_type)
+{
+	// send start message
+	chSequentialStreamWrite(out, (uint8_t*)"START\r", 6);
 
+	// send message type
+	switch(msg_type) {
+		case MSG_COLOR:
+			chprintf(out, "color");
+			break;
+		case MSG_IMAGE_RGB:
+			chprintf(out, "rgb");
+			break;
+		case MSG_IMAGE_GRAYSCALE:
+			chprintf(out, "grayscale");
+			break;
+		case MSG_IMAGE_GAUSS:
+			chprintf(out, "gauss");
+			break;
+		case MSG_IMAGE_SOBEL_MAG:
+			chprintf(out, "sobel");
+			break;
+		case MSG_IMAGE_LOCAL_THR:
+			chprintf(out, "local");
+			break;
+		case MSG_IMAGE_CANNY:
+			chprintf(out, "canny");
+			break;
+		case MSG_IMAGE_PATH:
+			chprintf(out, "path");
+			break;
+	}
+	chprintf(out, "\n");
+
+	// send message length
+	chSequentialStreamWrite(out, (uint8_t*)&size, sizeof(uint16_t));
+
+	// send message body
+
+	/** @note: buffer has a maximum size of around 4000-4500,
+	 *         which is why we send it in packets of MAX_BUFFER_SIZE
+	 */
+	if (msg_type != MSG_IMAGE_PATH) {
+		uint16_t k = 0;
+		uint16_t length = size;
+		if (size > MAX_BUFFER_SIZE) {
+			while (length > MAX_BUFFER_SIZE) {
+				chSequentialStreamWrite(out, data + k*MAX_BUFFER_SIZE,
+										sizeof(uint8_t) * MAX_BUFFER_SIZE);
+				length -= MAX_BUFFER_SIZE;
+				++k;
+			}
+			chSequentialStreamWrite(out, data + k*MAX_BUFFER_SIZE,
+									sizeof(uint8_t) * length);
+		}
+
+	} else {
+		cartesian_coord* path = data_get_pos();
+		uint8_t* color = data_get_color();
+
+		for(uint16_t i = 0; i < size; ++i) {
+			chSequentialStreamWrite((BaseSequentialStream *)&SD3,
+			                       (uint8_t*)&(path[i].x), sizeof(uint8_t));
+		}
+		for(uint16_t i = 0; i < size; ++i) {
+			chSequentialStreamWrite((BaseSequentialStream *)&SD3,
+			                        (uint8_t*)&(path[i].y), sizeof(uint8_t));
+		}
+		for(uint16_t i = 0; i < size; ++i) {
+			chSequentialStreamWrite((BaseSequentialStream *)&SD3,
+			                        (uint8_t*)&(color[i]), sizeof(uint8_t));
+		}
+	}
+}
+
+void com_request_color(uint8_t col)
+{
+	uint8_t color = white;
+	switch(col) {
+		case white:
+			color = 'W';
+			break;
+		case black:
+			color = 'D';
+			break;
+		case red:
+			color = 'R';
+			break;
+		case blue:
+			color = 'B';
+			break;
+		case green:
+			color = 'G';
+			break;
+		case none:
+			color = 'X';
+			break;
+	}
+	com_send_data((BaseSequentialStream *)&SD3, &color, 1, MSG_COLOR);
+}
 
 

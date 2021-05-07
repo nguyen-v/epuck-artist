@@ -22,6 +22,7 @@
 // Module headers
 #include <mod_img_processing.h>
 #include <mod_path.h>
+#include <mod_communication.h>
 #include <mod_data.h>
 #include <tools.h>
 
@@ -181,6 +182,7 @@ static uint8_t classify_color(rgb_color rgb)
 
 /**
  * @brief                       converts an rgb565 color to a grayscale image
+ *                              and classifies image colors
  * @param[out]  color           pointer to buffer containing path color
  * @return                      none
  */
@@ -554,15 +556,31 @@ static void canny_edge(void){
 	uint8_t* color = data_alloc_color(IM_LENGTH_PX * IM_HEIGHT_PX);
 	set_grayscale_filter_colors(color);
 
+	// send grayscale image
+	com_send_data((BaseSequentialStream *)&SD3, img_buffer,
+	              IM_LENGTH_PX*IM_HEIGHT_PX*sizeof(uint8_t), MSG_IMAGE_GRAYSCALE);
+
 	img_temp_buffer = calloc(IM_LENGTH_PX*IM_HEIGHT_PX, sizeof(uint8_t));
 	gaussian_filter();
 
-	sobel_angle_state = malloc(IM_LENGTH_PX*IM_HEIGHT_PX*sizeof(uint8_t));
+	// send image after Gaussian filter
+	com_send_data((BaseSequentialStream *)&SD3, img_temp_buffer,
+	              IM_LENGTH_PX*IM_HEIGHT_PX*sizeof(uint8_t), MSG_IMAGE_GAUSS);
+
+	sobel_angle_state = calloc(IM_LENGTH_PX*IM_HEIGHT_PX, sizeof(uint8_t));
 	I_mag = malloc(IM_LENGTH_PX*IM_HEIGHT_PX*sizeof(float));
 
 	float max = sobel_filter();
 
+	// send Sobel filter gradient data
+	com_send_data((BaseSequentialStream *)&SD3, sobel_angle_state,
+	              IM_LENGTH_PX*IM_HEIGHT_PX*sizeof(uint8_t), MSG_IMAGE_SOBEL_MAG);
+
 	local_max_supression(max);
+
+	// send image after local max suppression (local thresholding)
+	com_send_data((BaseSequentialStream *)&SD3, img_buffer,
+	              IM_LENGTH_PX*IM_HEIGHT_PX*sizeof(uint8_t), MSG_IMAGE_LOCAL_THR);
 
 	free(I_mag);
 
@@ -576,6 +594,10 @@ static void canny_edge(void){
 	} else {
 		fill_background();
 	}
+
+	// send final Canny filtered image
+	com_send_data((BaseSequentialStream *)&SD3, img_buffer,
+	              IM_LENGTH_PX*IM_HEIGHT_PX*sizeof(uint8_t), MSG_IMAGE_CANNY);
 
 	free(img_temp_buffer);
 
@@ -622,6 +644,10 @@ static THD_FUNCTION(thd_process_image, arg) {
 	while(1){
 		chBSemWait(&sem_image_captured);
 		img_buffer = dcmi_get_last_image_ptr();
+
+		// send rgb image
+		com_send_data((BaseSequentialStream *)&SD3, img_buffer,
+		              IM_LENGTH_PX*IM_HEIGHT_PX*sizeof(uint16_t), MSG_IMAGE_RGB);
 		canny_edge();
 		path_planning();
 	}
@@ -666,48 +692,3 @@ void capture_image(void){
 	chBSemSignal(&sem_capture_image);
 
 }
-
-void send_image(void) {
-	if(image_is_ready()) {
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer, 4000);
-		chThdSleepMilliseconds(400);
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+4000, 4000);
-		chThdSleepMilliseconds(400);
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+8000, 4000);
-		chThdSleepMilliseconds(400);
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+12000, 4000);
-		chThdSleepMilliseconds(400);
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+16000, 2000);
-	}
-
-}
-
-void send_image_half(void) {
-	if(image_is_ready()) {
-//		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
-//		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer, 4000);
-//		chThdSleepMilliseconds(400);
-//		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+4000, 4000);
-//		chThdSleepMilliseconds(400);
-//		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+8000, 1000);
-//		chThdSleepMilliseconds(400);
-//		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
-//		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_temp_buffer, 4000);
-//		chThdSleepMilliseconds(400);
-//		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_temp_buffer+4000, 4000);
-//		chThdSleepMilliseconds(400);
-//		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_temp_buffer+8000, 1000);
-//		chThdSleepMilliseconds(400);
-
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer, 4000);
-		chThdSleepMilliseconds(400);
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+4000, 4000);
-		chThdSleepMilliseconds(400);
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)img_buffer+8000, 1000);
-		chThdSleepMilliseconds(400);
-	}
-}
-
-
