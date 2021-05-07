@@ -209,8 +209,11 @@ void com_send_data(BaseSequentialStream* out, uint8_t* data, uint16_t size,
 		case MSG_IMAGE_GAUSS:
 			chprintf(out, "gauss");
 			break;
-		case MSG_IMAGE_SOBEL:
-			chprintf(out, "sobel");
+		case MSG_IMAGE_SOBEL_MAG:
+			chprintf(out, "sobel_mag");
+			break;
+		case MSG_LOCAL_THRESHOLD:
+			chprintf(out, "local_threshold");
 			break;
 		case MSG_IMAGE_CANNY:
 			chprintf(out, "canny");
