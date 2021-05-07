@@ -6,6 +6,10 @@
 #ifndef _MOD_DATA_H_
 #define _MOD_DATA_H_
 
+// C standard header files
+
+#include <stdbool.h>
+
 /*===========================================================================*/
 /* Module data structures and types.                                         */
 /*===========================================================================*/
@@ -16,7 +20,7 @@ typedef struct cartesian_coord {
 } cartesian_coord;
 
 typedef enum Colors {
-	white, black, red, blue, green, none
+	white, black, red, green, blue, none
 } Colors;
 
 /*===========================================================================*/

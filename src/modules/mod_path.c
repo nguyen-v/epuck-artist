@@ -47,17 +47,20 @@
 */
 
 // C standard header files
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
 
 // ChibiOS headers
+
 #include "ch.h"
 #include "hal.h"
 #include <chprintf.h>
 #include <usbcfg.h>
 
 // Module headers
+
 #include <mod_path.h>
 #include <tools.h>
 #include <mod_img_processing.h>
@@ -846,6 +849,8 @@ void path_planning(void)
 	data_realloc_color(total_size);
 
 	img_resize(final_path, 200, 200); // magic numbers to define in mod_draw.h
+
+	data_set_ready(true);
 
 	// free buffers
 	free(status);

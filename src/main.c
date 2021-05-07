@@ -21,17 +21,13 @@
 #include "camera/dcmi_camera.h"
 
 
-
-
-
-
-
 // Module headers
 
 #include <main.h>
 #include <mod_sensors.h>
 #include <mod_draw.h>
 #include <mod_communication.h>
+#include <mod_img_processing.h>
 #include <mod_calibration.h>
 #include <mod_data.h>
 #include <mod_state.h>
@@ -39,27 +35,6 @@
 /*===========================================================================*/
 /* Module local functions.                                                   */
 /*===========================================================================*/
-
-//just a test
-static void send_path(void) // just a test, to include with communication functions in mod_state branch
-{
-	uint16_t length = data_get_length();
-	cartesian_coord* path = data_get_pos();
-	uint8_t* color = data_get_color();
-
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START\r", 6);
-	chprintf((BaseSequentialStream *)&SD3, "path\n");
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&length, sizeof(uint16_t));
-	for(uint16_t i = 0; i<length; ++i) {
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&(path[i].x), sizeof(uint8_t));
-	}
-	for(uint16_t i = 0; i<length; ++i) {
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&(path[i].y), sizeof(uint8_t));
-	}
-	for(uint16_t i = 0; i<length; ++i) {
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&(color[i]), sizeof(uint8_t));
-	}
-}
 
 /**
  * @brief             Initalizes all modules.
@@ -69,7 +44,7 @@ static void init_all(void)
 	halInit();
 	chSysInit();
 	mpu_init();
-	usb_start();
+//	usb_start();
 	dcmi_start();
 	po8030_start();
 	com_serial_start();

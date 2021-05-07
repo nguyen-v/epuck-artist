@@ -25,7 +25,7 @@ MAX_BUFFER_LENGTH           = 4000
 # Error, timeout
 TIMEOUT_PERIOD              = 1
 ERROR_COUNT_MAX             = 10
-ARDUINO_ERR_COUNT_MAX       = 50
+ARDUINO_ERR_COUNT_MAX       = 500
 
 # Periods
 READ_PERIOD                 = 0.1
@@ -130,28 +130,49 @@ def receive_data(ser_epuck, ser_arduino):
         msg = ser_epuck.readline().decode("utf_8")
         length = struct.unpack('<h',ser_epuck.read(2))  # length is sent as an uint16
         length = length[0]
-        output_buffer = b''
-        # Read rest of buffer
-        if length > MAX_BUFFER_LENGTH:
-            while length > MAX_BUFFER_LENGTH:
-                output_buffer += ser_epuck.read(MAX_BUFFER_LENGTH)
-                length -= MAX_BUFFER_LENGTH
-        else:
-            output_buffer = ser_epuck.read(length)
 
-        if "color" in msg:
-            print("Requesting color change " + output_buffer.decode("utf8"))
-            ser_arduino.write(output_buffer)
-            conf_msg = ""
-            error_count = 0
-            while CONFIRMATION_MSG not in conf_msg and error_count < ARDUINO_ERR_COUNT_MAX:
-                conf_msg = ser_arduino.readline().decode("utf_8")
-                error_count += 1
-                if CONFIRMATION_MSG in conf_msg or error_count == ARDUINO_ERR_COUNT_MAX:
-                    time.sleep(0.2)
-                    print("Arduino has finished changing colors.")
-                    send_command(ser_epuck, "S")
-        time.sleep(0.1)
+        if "path" in msg:
+            x_buffer = b''
+            y_buffer = b''
+            c_buffer = b''
+            print(length)
+            x_buffer = ser_epuck.read(length)
+            y_buffer = ser_epuck.read(length)
+            c_buffer = ser_epuck.read(length)
+
+            c_buffer += b'\x00'
+            i = 0
+            for i in range(0, length):
+                # print("%d x %d " %(i, x_buffer[i]))
+                print("%d x %d y %d C %d" % (i, x_buffer[i], y_buffer[i], c_buffer[i]))
+
+            f = open("out.svg",'w')
+            f.write(makesvg(x_buffer, y_buffer, c_buffer, length))
+            f.close()
+        else:
+            output_buffer = b''
+            # Read rest of buffer
+            if length > MAX_BUFFER_LENGTH:
+                while length > MAX_BUFFER_LENGTH:
+                    output_buffer += ser_epuck.read(MAX_BUFFER_LENGTH)
+                    length -= MAX_BUFFER_LENGTH
+            else:
+                output_buffer = ser_epuck.read(length)
+
+            if "color" in msg:
+                print("Requesting color change " + output_buffer.decode("utf8"))
+                ser_arduino.write(output_buffer)
+                conf_msg = ""
+                error_count = 0
+                while CONFIRMATION_MSG not in conf_msg and error_count < ARDUINO_ERR_COUNT_MAX:
+                    conf_msg = ser_arduino.readline().decode("utf_8")
+                    error_count += 1
+                    if CONFIRMATION_MSG in conf_msg or error_count == ARDUINO_ERR_COUNT_MAX:
+                        time.sleep(0.2)
+                        print("Arduino has finished changing colors.")
+                        send_command(ser_epuck, "S")
+
+        time.sleep(0.5)
 
 
 
@@ -478,8 +499,8 @@ def send_command(ser, command):
             "Connection to e-puck lost.")
         time.sleep(2) # wait for the e-puck to properly process the command
 
-        if command == 'G':
-            send_move_data(ser)
+        # if command == 'G':
+        #     send_move_data(ser)
 
 def read_serial(ser):
     while True:

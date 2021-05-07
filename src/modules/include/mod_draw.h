@@ -10,8 +10,8 @@
 /* Exported constants                                                        */
 /*===========================================================================*/
 
-#define IM_MAX_HEIGHT     200 // px
-#define IM_MAX_WIDTH      200 // px
+#define IM_MAX_HEIGHT     150 // px
+#define IM_MAX_WIDTH      150 // px
 
 /*===========================================================================*/
 /* External declarations.                                                    */
