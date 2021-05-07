@@ -64,6 +64,7 @@
 #include <mod_path.h>
 #include <tools.h>
 #include <mod_img_processing.h>
+#include <mod_communication.h>
 
 /*===========================================================================*/
 /* Module constants.                                                         */
@@ -851,6 +852,9 @@ void path_planning(void)
 	img_resize(final_path, 200, 200); // magic numbers to define in mod_draw.h
 
 	data_set_ready(true);
+
+	// send path to computer
+	com_send_data((BaseSequentialStream *)&SD3, NULL, total_size, MSG_IMAGE_PATH);
 
 	// free buffers
 	free(status);

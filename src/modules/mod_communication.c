@@ -210,10 +210,10 @@ void com_send_data(BaseSequentialStream* out, uint8_t* data, uint16_t size,
 			chprintf(out, "gauss");
 			break;
 		case MSG_IMAGE_SOBEL_MAG:
-			chprintf(out, "sobel_mag");
+			chprintf(out, "sobel");
 			break;
-		case MSG_LOCAL_THRESHOLD:
-			chprintf(out, "local_threshold");
+		case MSG_IMAGE_LOCAL_THR:
+			chprintf(out, "local");
 			break;
 		case MSG_IMAGE_CANNY:
 			chprintf(out, "canny");
@@ -232,15 +232,36 @@ void com_send_data(BaseSequentialStream* out, uint8_t* data, uint16_t size,
 	/** @note: buffer has a maximum size of around 4000-4500,
 	 *         which is why we send it in packets of MAX_BUFFER_SIZE
 	 */
-
-	uint16_t length = size;
-	if (size > MAX_BUFFER_SIZE) {
-		while (length > MAX_BUFFER_SIZE) {
-			chSequentialStreamWrite(out, data, sizeof(uint8_t) * MAX_BUFFER_SIZE);
-			length -= MAX_BUFFER_SIZE;
+	if (msg_type != MSG_IMAGE_PATH) {
+		uint16_t k = 0;
+		uint16_t length = size;
+		if (size > MAX_BUFFER_SIZE) {
+			while (length > MAX_BUFFER_SIZE) {
+				chSequentialStreamWrite(out, data + k*MAX_BUFFER_SIZE,
+										sizeof(uint8_t) * MAX_BUFFER_SIZE);
+				length -= MAX_BUFFER_SIZE;
+				++k;
+			}
+			chSequentialStreamWrite(out, data + k*MAX_BUFFER_SIZE,
+									sizeof(uint8_t) * length);
 		}
+
 	} else {
-		chSequentialStreamWrite(out, data, sizeof(uint8_t) * length);
+		cartesian_coord* path = data_get_pos();
+		uint8_t* color = data_get_color();
+
+		for(uint16_t i = 0; i < size; ++i) {
+			chSequentialStreamWrite((BaseSequentialStream *)&SD3,
+			                       (uint8_t*)&(path[i].x), sizeof(uint8_t));
+		}
+		for(uint16_t i = 0; i < size; ++i) {
+			chSequentialStreamWrite((BaseSequentialStream *)&SD3,
+			                        (uint8_t*)&(path[i].y), sizeof(uint8_t));
+		}
+		for(uint16_t i = 0; i < size; ++i) {
+			chSequentialStreamWrite((BaseSequentialStream *)&SD3,
+			                        (uint8_t*)&(color[i]), sizeof(uint8_t));
+		}
 	}
 }
 

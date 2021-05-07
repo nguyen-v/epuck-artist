@@ -57,25 +57,6 @@ static thread_t* ptr_process_cmd;
 /*===========================================================================*/
 /* Module local functions.                                                   */
 /*===========================================================================*/
-static void send_path(void) // just a test, to include with communication functions in mod_state branch
-{
-	uint16_t length = data_get_length();
-	cartesian_coord* path = data_get_pos();
-	uint8_t* color = data_get_color();
-
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START\r", 6);
-	chprintf((BaseSequentialStream *)&SD3, "path\n");
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&length, sizeof(uint16_t));
-	for(uint16_t i = 0; i<length; ++i) {
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&(path[i].x), sizeof(uint8_t));
-	}
-	for(uint16_t i = 0; i<length; ++i) {
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&(path[i].y), sizeof(uint8_t));
-	}
-	for(uint16_t i = 0; i<length; ++i) {
-		chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&(color[i]), sizeof(uint8_t));
-	}
-}
 
 
 /**
@@ -109,7 +90,7 @@ static void process_command(uint8_t cmd)
 			break;
 		case CMD_GET_DATA:
 //			com_receive_data((BaseSequentialStream *)&SD3);
-			send_path();
+//			send_path();
 			break;
 		case CMD_DRAW:
 			if ((cal_get_state() || cal_get_home_state()) == false)

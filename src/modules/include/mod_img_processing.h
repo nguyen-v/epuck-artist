@@ -25,7 +25,7 @@ typedef struct rgb_color {
 	uint8_t blue;
 } rgb_color;
 
-enum Octants{first_octant, second_octant, third_octant, fourth_octant,
+enum Octants{first_octant = 1, second_octant, third_octant, fourth_octant,
              fifth_octant, sixth_octant, seventh_octant, eighth_octant
 };
 
