@@ -34,6 +34,29 @@ WRITE_PERIOD                = 0.1
 # Messages
 CONFIRMATION_MSG             = 'Ready'
 
+# Images
+IM_LENGTH_PX                = 100
+IM_HEIGHT_PX                = 90
+IMG_PATH                    = "C:/Users/41786/Desktop/Projects/BA-6/SE/epuck-artist/img/"
+
+# Sobel
+FIRST_OCTANT                = 1
+SECOND_OCTANT               = 2
+THIRD_OCTANT                = 3
+FOURTH_OCTANT               = 4
+FIFTH_OCTANT                = 5
+SIXTH_OCTANT                = 6
+SEVENTH_OCTANT              = 7
+EIGHTH_OCTANT               = 8
+
+RED    = bytes([int.from_bytes(b'\xF8', "big"), int.from_bytes(b'\x00', "big")])
+ORANGE = bytes([int.from_bytes(b'\xFC', "big"), int.from_bytes(b'\xA0', "big")])
+YELLOW = bytes([int.from_bytes(b'\xFF', "big"), int.from_bytes(b'\x60', "big")])
+GREEN  = bytes([int.from_bytes(b'\x07', "big"), int.from_bytes(b'\xE0', "big")])
+BLUE   = bytes([int.from_bytes(b'\x05', "big"), int.from_bytes(b'\x5F', "big")])
+D_BLUE = bytes([int.from_bytes(b'\x01', "big"), int.from_bytes(b'\xBF', "big")])
+PURPLE = bytes([int.from_bytes(b'\x88', "big"), int.from_bytes(b'\x1F', "big")])
+PINK   = bytes([int.from_bytes(b'\xF8', "big"), int.from_bytes(b'\x1D', "big")])
 
 # Commands
 COMMANDS = (
@@ -62,28 +85,6 @@ CMD_INDEX = {
     'H' : 8    , 
     'V' : 9    
 }
-
-#Image types
-IMG_TYPE = (
-    'color'              ,
-    'rgb'                ,
-    'grayscale'          ,
-    'gauss'              ,
-    'sobel_mag'          ,
-    'local_threshold'    ,
-    'canny'              ,
-    'path'           
-)
-
-# img frombytes mode and arguments
-COLOR = "COLOR"
-RGB = "RGB"
-GRAYSCALE = "L"
-TWO_BYTES_COLOR = "BGR;16"
-
-
-# IMAGE FOLDER DESTINATION
-DEST_1 = "C:/Users/41786/Desktop/Projects/BA-6/SE/img"
 
 CMD_HEADER = [b'' for x in range(len(COMMANDS))]
 CMD_HEADER[CMD_INDEX['V']] = b'LEN'
@@ -157,29 +158,25 @@ def receive_data(ser_epuck, ser_arduino):
             x_buffer = b''
             y_buffer = b''
             c_buffer = b''
-            print(length)
             x_buffer = ser_epuck.read(length)
             y_buffer = ser_epuck.read(length)
             c_buffer = ser_epuck.read(length)
+            c_buffer += b'\x00' # to avoid being out of range
 
-            c_buffer += b'\x00'
-            i = 0
-            for i in range(0, length):
-                # print("%d x %d " %(i, x_buffer[i]))
-                print("%d x %d y %d C %d" % (i, x_buffer[i], y_buffer[i], c_buffer[i]))
-
-            f = open("out.svg",'w')
-            f.write(makesvg(x_buffer, y_buffer, c_buffer, length))
+            f = open(IMG_PATH + "path.svg",'w')
+            f.write(create_svg(x_buffer, y_buffer, c_buffer, length))
             f.close()
+
         else:
             output_buffer = b''
             # Read rest of buffer
-            if length > MAX_BUFFER_LENGTH:
-                while length > MAX_BUFFER_LENGTH:
+            length_to_read = length
+            if length_to_read > MAX_BUFFER_LENGTH:
+                while length_to_read > MAX_BUFFER_LENGTH:
                     output_buffer += ser_epuck.read(MAX_BUFFER_LENGTH)
-                    length -= MAX_BUFFER_LENGTH
-            else:
-                output_buffer = ser_epuck.read(length)
+                    length_to_read -= MAX_BUFFER_LENGTH
+            output_buffer += ser_epuck.read(length_to_read)
+            img_name = ''
 
             if "color" in msg:
                 print("Requesting color change " + output_buffer.decode("utf8"))
@@ -193,224 +190,61 @@ def receive_data(ser_epuck, ser_arduino):
                         time.sleep(0.2)
                         print("Arduino has finished changing colors.")
                         send_command(ser_epuck, "S")
+            elif "rgb" in msg:
+                img_buffer = bytearray(len(output_buffer))
+                img_buffer[0::2] = output_buffer[1::2]
+                img_buffer[1::2] = output_buffer[0::2]
+                img = Image.frombytes("RGB", (IM_LENGTH_PX, IM_HEIGHT_PX), bytes(img_buffer), "raw", "BGR;16")
+                img_name = "rgb"
 
+            elif "grayscale" in msg or "gauss" in msg or "local" in msg or "canny" in msg:
+                img = Image.frombytes("L", (IM_LENGTH_PX, IM_HEIGHT_PX), bytes(output_buffer), "raw")
+                if "grayscale" in msg:
+                    img_name = "grayscale"
+                elif "gauss" in msg:
+                    img_name = "gauss"
+                elif "local" in msg:
+                    img_name = "local_max"
+                elif "canny" in msg:
+                    img_name = "canny"
+
+            elif "sobel" in msg:
+                img_buffer = bytearray(2*len(output_buffer))
+                for i in range (0, length-1):
+                    # convert angle states to rgb colors
+                    rgb = bytes([0, 0])
+                    if output_buffer[i] == FIRST_OCTANT:
+                        rgb = RED
+                    elif output_buffer[i] == SECOND_OCTANT:
+                        rgb = ORANGE
+                    elif output_buffer[i] == THIRD_OCTANT:
+                        rgb = YELLOW
+                    elif output_buffer[i] == FOURTH_OCTANT:
+                        rgb = GREEN
+                    elif output_buffer[i] == FIFTH_OCTANT:
+                        rgb = BLUE
+                    elif output_buffer[i] == SIXTH_OCTANT:
+                        rgb = D_BLUE
+                    elif output_buffer[i] == SEVENTH_OCTANT:
+                        rgb = PURPLE
+                    elif output_buffer[i] == EIGHTH_OCTANT:
+                        rgb = PINK
+
+                    img_buffer[2*i] = rgb[1]
+                    img_buffer[2*i+1] = rgb[0]
+                img = Image.frombytes("RGB", (IM_LENGTH_PX, IM_HEIGHT_PX), bytes(img_buffer), "raw", "BGR;16")
+                img_name = "sobel"
+
+            if ("color" not in msg):
+                img.save(IMG_PATH + img_name + ".png", "PNG")
         time.sleep(0.5)
 
-def receive_images(ser):
-    while process_finished != 0:
-        state = 0
-        while(state != 5):
-            #reads 1 byte
-            c1 = ser.read(1)
-            #timeout condition
-            if(c1 == b''):
-                return [];
-
-            if(state == 0):
-                if(c1 == b'S'):
-                    state = 1
-                else:
-                    state = 0
-            elif(state == 1):
-                if(c1 == b'T'):
-                    state = 2
-                elif(c1 == b'S'):
-                    state = 1
-                else:
-                    state = 0
-            elif(state == 2):
-                if(c1 == b'A'):
-                    state = 3
-                elif(c1 == b'S'):
-                    state = 1
-                else:
-                    state = 0
-            elif(state == 3):
-                if(c1 == b'R'):
-                    state = 4
-                elif (c1 == b'S'):
-                    state = 1
-                else:
-                    state = 0
-            elif(state == 4):
-                if(c1 == b'T'):
-                    state = 5
-                elif (c1 == b'S'):
-                    state = 1
-                else:
-                    state = 0
-
-        img_type = ""
-        img_arg  = ""
-        img_mode = b''
-
-        img_mode = ser.readline()
-        length = 1
-        leftover = 1000
-
-
-        length = struct.unpack('<h',ser.read(2))
-        length = length[0]
-        toRead = 4000
-        output_buffer = b''
-        i = 0
-
-        if(img_mode not in IMG_TYPE):
-            print("Invalid image type: " + str(img_mode))
-        else:
-            if(img_mode == b'color'):
-                img_type = RGB
-                img_arg = TWO_BYTES_COLOR
-            elif(img_mode == b'rgb' or img_mode == b'path'):
-                img_type = RGB
-            elif(img_mode == b'grayscale' or img_mode == b'gauss' or
-                img_mode == b'sobel_mag' or img_mode == b'canny'):
-                img_type = GRAYSCALE
-            elif(img_mode == b'path'):
-                img_type = RGB
-                process_finished = 1
-
-        if length > MAX_BUFFER_LENGTH:
-            while length > MAX_BUFFER_LENGTH:
-                output_buffer += ser.read(MAX_BUFFER_LENGTH)
-                length -= MAX_BUFFER_LENGTH
-        else:
-            output_buffer = ser.read(length)
-
-        newer_buffer = b''
-        new_buffer = bytearray(len(output_buffer))
-
-        if(img_mode == b'rgb' or img_mode == b'path'):
-            for i in range(0, 9000):
-                if(output_buffer[i::i+1] == b'\x00'):
-                    newer_buffer += b'\xFF\xFF\xFF' 
-                elif(output_buffer[i::i+1] == b'\x01'):
-                    newer_buffer += b'\xFF\x00\x00'  
-                elif(output_buffer[i::i+1] == b'\x02'):
-                    newer_buffer += b'\x00\xFF\x00'  
-                elif(output_buffer[i::i+1] == b'\x03'):
-                    newer_buffer += b'\x00\x00\xFF'  
-                elif(output_buffer[i::i+1] == b'\x04'):
-                    newer_buffer += b'\x00\x00\x00' 
-            new_buffer = newer_buffer
-                
-        if(img_mode == b'color'):
-            new_buffer[0::2] = output_buffer[1::2]
-            new_buffer[1::2] = output_buffer[0::2]
-
-        im = Image.frombytes(img_type, (100, 90), bytes(new_buffer), "raw", img_arg)
-        nameimg = "Image_" + img_mode.decode("utf-8")
-        im.show(title=nameimg)
-        im.save( DEST_IMAGE + ".png", "PNG")
-    process_finished = 0
-
-def receive_image(ser):
-    state = 0
-
-    while(state != 5):
-        #reads 1 byte
-        c1 = ser.read(1)
-        #timeout condition
-        if(c1 == b''):
-            return [];
-
-        if(state == 0):
-            if(c1 == b'S'):
-                state = 1
-            else:
-                state = 0
-        elif(state == 1):
-            if(c1 == b'T'):
-                state = 2
-            elif(c1 == b'S'):
-                state = 1
-            else:
-                state = 0
-        elif(state == 2):
-            if(c1 == b'A'):
-                state = 3
-            elif(c1 == b'S'):
-                state = 1
-            else:
-                state = 0
-        elif(state == 3):
-            if(c1 == b'R'):
-                state = 4
-            elif (c1 == b'S'):
-                state = 1
-            else:
-                state = 0
-        elif(state == 4):
-            if(c1 == b'T'):
-                state = 5
-            elif (c1 == b'S'):
-                state = 1
-            else:
-                state = 0
-
-    print("Receiving image")
-
-    msg = ser.readline().decode("utf_8")
-    print(msg)
-    length = struct.unpack('<h',ser.read(2))  # length is sent as an uint16
-    length = length[0]
-    print("length" + str(length))
-
-    x_buffer = b''
-    y_buffer = b''
-    c_buffer = b''
-
-    x_buffer = ser.read(length)
-    y_buffer = ser.read(length)
-    c_buffer = ser.read(length)
-
-    c_buffer += b'\x00'
-    i = 0
-    for i in range(0, length):
-        # print("%d x %d " %(i, x_buffer[i]))
-        print("%d x %d y %d C %d" % (i, x_buffer[i], y_buffer[i], c_buffer[i]))
-
-    f = open("out.svg",'w')
-    f.write(makesvg(x_buffer, y_buffer, c_buffer, length))
-    f.close()
-    
-#     toRead = 4000
-#     rcv_buffer = b''
-#     # print(rcv_buffer)
-#     # print(len(rcv_buffer))
-#     #reads the data
-#     i = 0
-#     # while i < toRead:
-#     #     print(ser.read())
-#     #     i +=1
-
-# # WORKING 90X100 rgb
-#     rcv_buffer += ser.read(toRead)
-#     rcv_buffer += ser.read(toRead)
-#     rcv_buffer += ser.read(toRead)
-#     rcv_buffer += ser.read(toRead)
-#     rcv_buffer += ser.read(2000)
-
-#     # rcv_buffer += ser.read(toRead)
-#     # rcv_buffer += ser.read(toRead)
-#     # rcv_buffer += ser.read(1000)
-
-#     new_buffer = bytearray(len(rcv_buffer))
-#     new_buffer[0::2] = rcv_buffer[1::2]
-#     new_buffer[1::2] = rcv_buffer[0::2]
-#     im = Image.frombytes("RGB", (100, 90), bytes(new_buffer), "raw", "BGR;16")
-#     # im = Image.frombytes("L", (100, 90), bytes(rcv_buffer), "raw")
-#     nameimg ="Image"
-#     im.show(title=nameimg)
-#     im.save("C:/Users/41786/Desktop/Projects/BA-6/SE/img" + ".png", "PNG")
-
-def makesvg(x_buffer, y_buffer, c_buffer, length):
+def create_svg(x_buffer, y_buffer, c_buffer, length):
     out = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="180" version="1.1">\n'
     polyline = ''
     comma = ''
     color = "black"
     for i in range(1, length):
-        # l = ",".join([str(x_buffer[i])+","+str(y_buffer[i]) for p in l])
         if c_buffer[i] != 0:
             comma = ","
         else:
@@ -418,7 +252,6 @@ def makesvg(x_buffer, y_buffer, c_buffer, length):
 
         polyline += comma+str(x_buffer[i])+","+str(y_buffer[i])
         if c_buffer[i] == 0:
-            print("0")
             if c_buffer[i+1] == 1:
                 color = "black"
             elif c_buffer[i+1] == 2:
@@ -433,38 +266,6 @@ def makesvg(x_buffer, y_buffer, c_buffer, length):
             polyline = ""
     out += '</svg>'
     return out
-
-
-
-#     toRead = 4000
-#     rcv_buffer = b''
-#     # print(rcv_buffer)
-#     # print(len(rcv_buffer))
-#     #reads the data
-#     i = 0
-#     # while i < toRead:
-#     #     print(ser.read())
-#     #     i +=1
-
-# # WORKING 90X100 rgb
-#     # rcv_buffer += ser.read(toRead)
-#     # rcv_buffer += ser.read(toRead)
-#     # rcv_buffer += ser.read(toRead)
-#     # rcv_buffer += ser.read(toRead)
-#     # rcv_buffer += ser.read(2000)
-
-#     rcv_buffer += ser.read(toRead)
-#     rcv_buffer += ser.read(toRead)
-#     rcv_buffer += ser.read(1000)
-
-#     new_buffer = bytearray(len(rcv_buffer))
-#     # new_buffer[0::2] = rcv_buffer[1::2]
-#     # new_buffer[1::2] = rcv_buffer[0::2]
-#     # im = Image.frombytes("RGB", (100, 90), bytes(new_buffer), "raw", "BGR;16")
-#     im = Image.frombytes("L", (100, 90), bytes(rcv_buffer), "raw")
-#     nameimg ="Image"
-#     im.show(title=nameimg)
-#     im.save("C:/Users/41786/Desktop/Projects/BA-6/SE/img" + ".png", "PNG")
 
 def parse_arg():
     port = SERIAL_PORT_DEFAULT
@@ -507,8 +308,6 @@ def connect_to_port(port, baud_rate, reset):
         send_command(ser, 'R') # reset the e-puck when first connecting
     return ser
 
-# todo: check state of e-puck: certain command should not be sent when
-# the robot is in a certain state
 def send_command(ser, command):
     if command not in COMMANDS:
         print("Invalid command: " + str(command))
@@ -633,53 +432,9 @@ def send_move_data(ser):
 # Main function =============================================================
 
 def main():
-
-    # x = struct.pack('<h', 289)
-    # length = struct.unpack('<h', x)
-    # length = length[1]
-    # print(length)
-
-
- #new_buffer = bytearray(len(rcv_buffer))
-    # rcv_buffer = b''
-    # newer_buffer = b''
-    # for i in range(0, 9000):
-    #     if(i >= 4500):
-    #         rcv_buffer += b'\x00'
-    #     else:
-    #         rcv_buffer += b'\x11'
-    # comp = bytearray(len(rcv_buffer))
-    # comp = rcv_buffer
-    # if(img_mode == b'rgb' or img_mode == b'path'):
-    # for i in range(0, 9000):
-    #     if(rcv_buffer[i::i+1] == b'\x00'):
-    #         newer_buffer += b'\x00\x00\x00' 
-    #         elif(rcv_buffer[i] == b'\x01'):
-    #     else:
-    #         newer_buffer += b'\xFF\x00\x00'  
-    #         elif(rcv_buffer[i] == b'\x02'):
-    #             newer_buffer += b'\x00\xFF\x00'  
-    #         elif(rcv_buffer[i] == b'\x03'):
-    #             newer_buffer += b'\x00\x00\xFF'  
-    #         elif(rcv_buffer[i] == b'\x04'):
-    #             newer_buffer += b'\xFF\xFF\xFF' 
-
-    # if(img_type == RGB):
-    #     new_buffer[0::2] = rcv_buffer[1::2]
-    #     new_buffer[1::2] = rcv_buffer[0::2]
-    # im = Image.frombytes(img_type, (100, 90), bytes(rcv_buffer), "raw", img_arg)
-    # im = Image.frombytes(RGB, (100, 90), bytes(newer_buffer), "raw")
-    # nameimg = "Image_" 
-    # im.show(title=nameimg)
-
-
     port = parse_arg()
     ser_epuck = connect_to_port(port, SERIAL_BAUD_RATE, True)
     ser_arduino = connect_to_port("COM22", BT_BAUD_RATE, False)
-
-    # read_arduino = threading.Thread(target = read_serial, args = (ser2,))
-    # read_arduino.setDaemon(True)
-    # read_arduino.start()
 
     request_cmd = threading.Thread(target = request_command, args = (ser_epuck, ser_arduino))
     request_cmd.setDaemon(True)
@@ -689,18 +444,7 @@ def main():
                                 args = (ser_epuck, ser_arduino))
     rcv_data.setDaemon(True)
     rcv_data.start()
-
-    process_finished = 0
     while True:
-         command = input("Type a command: ")
-         if command != 'a':
-             send_command(ser, command)
-             time.sleep(1)
-         elif command == 'a':
-             command = input("Type a command (arduino): ")
-             ser2.write(command.encode())
-         elif command == 'B':
-                receive_images(ser)
          time.sleep(0.1)
 if __name__=="__main__":
     main()
