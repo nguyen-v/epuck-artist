@@ -20,7 +20,7 @@
 
 #define MAX_ALLOCATED_DATA   100000 // max size in bytes for data structures
 #define SIZE_OF_DATA         (sizeof(cartesian_coord) + sizeof(uint8_t))
-#define MAX_LENGTH           MAX_ALLOCATED_DATA/SIZE_OF_DATA
+#define MAX_LENGTH           (MAX_ALLOCATED_DATA/SIZE_OF_DATA)
 
 /*===========================================================================*/
 /* Module local variables.                                                   */
@@ -29,7 +29,7 @@
 static cartesian_coord* pos = NULL;
 static uint8_t* color = NULL;	// not in cartesian_coord to avoid padding
 static uint16_t data_length = 0;
-static data_is_ready = false;
+static bool data_is_ready = false;
 
 /*===========================================================================*/
 /* Module exported functions.                                                */
@@ -66,6 +66,7 @@ void data_free(void)
 		free(pos);
 	if (color != NULL)
 		free(color);
+	data_is_ready = false;
 	data_length = 0;
 	pos = NULL;
 	color = NULL;
