@@ -54,6 +54,7 @@ void sensors_init(void)
 	messagebus_init(&bus, &bus_lock, &bus_condvar);
 	proximity_start();
 	VL53L0X_start();
+	calibrate_ir();
 }
 
 
