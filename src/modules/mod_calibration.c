@@ -347,7 +347,6 @@ static THD_FUNCTION(thd_set_home, arg)
 
 		chThdSleepMilliseconds(SET_HOME_PERIOD);
 	}
-
 	is_setting_home = false;
 	chThdExit(0);
 }

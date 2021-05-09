@@ -242,11 +242,12 @@ void com_send_data(BaseSequentialStream* out, uint8_t* data, uint16_t size,
 				length -= MAX_BUFFER_SIZE;
 				++k;
 			}
-			chSequentialStreamWrite(out, data + k*MAX_BUFFER_SIZE,
-									sizeof(uint8_t) * length);
 		}
+		chSequentialStreamWrite(out, data + k*MAX_BUFFER_SIZE,
+											sizeof(uint8_t) * length);
+	}
 
-	} else {
+	if (msg_type == MSG_IMAGE_PATH) {
 		cartesian_coord* path = data_get_pos();
 		uint8_t* color = data_get_color();
 

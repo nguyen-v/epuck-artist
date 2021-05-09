@@ -180,6 +180,8 @@ def receive_data(ser_epuck, ser_arduino):
 
             if "color" in msg:
                 print("Requesting color change " + output_buffer.decode("utf8"))
+                ser_arduino.reset_input_buffer()
+                ser_arduino.reset_output_buffer()
                 ser_arduino.write(output_buffer)
                 conf_msg = ""
                 error_count = 0
@@ -190,6 +192,7 @@ def receive_data(ser_epuck, ser_arduino):
                         time.sleep(0.2)
                         print("Arduino has finished changing colors.")
                         send_command(ser_epuck, "S")
+                    time.sleep(0.1)
             elif "rgb" in msg:
                 img_buffer = bytearray(len(output_buffer))
                 img_buffer[0::2] = output_buffer[1::2]
