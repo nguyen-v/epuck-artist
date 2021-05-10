@@ -238,13 +238,13 @@ void com_send_data(BaseSequentialStream* out, uint8_t* data, uint16_t size,
 		if (size > MAX_BUFFER_SIZE) {
 			while (length > MAX_BUFFER_SIZE) {
 				chSequentialStreamWrite(out, data + k*MAX_BUFFER_SIZE,
-										sizeof(uint8_t) * MAX_BUFFER_SIZE);
+				                        sizeof(uint8_t) * MAX_BUFFER_SIZE);
 				length -= MAX_BUFFER_SIZE;
 				++k;
 			}
 		}
 		chSequentialStreamWrite(out, data + k*MAX_BUFFER_SIZE,
-											sizeof(uint8_t) * length);
+		                        sizeof(uint8_t) * length);
 	}
 
 	if (msg_type == MSG_IMAGE_PATH) {
