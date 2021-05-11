@@ -39,7 +39,7 @@
 #define CMD_CALIBRATE      'B'
 #define CMD_GET_DATA       'G'
 #define CMD_DRAW           'D'
-#define CMD_INTERACTIVE    'I'
+#define CMD_IMAGE          'I'
 #define CMD_HOME           'H'
 #define CMD_VALIDATE       'V'
 
@@ -73,7 +73,7 @@ static void process_command(uint8_t cmd)
 			cal_stop_home_thd();
 			draw_move(X_DEFAULT, Y_DEFAULT);
 			draw_reset();
-			com_request_color(none);
+//			com_request_color(none);
 			break;
 		case CMD_PAUSE:
 			draw_pause_thd();
@@ -96,7 +96,7 @@ static void process_command(uint8_t cmd)
 			if ((cal_get_state() || cal_get_home_state()) == false)
 				draw_create_thd();
 			break;
-		case CMD_INTERACTIVE:
+		case CMD_IMAGE:
 			capture_image();
 			break;
 		case CMD_HOME:
