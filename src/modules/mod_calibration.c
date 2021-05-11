@@ -31,6 +31,9 @@
 #include <mod_data.h>
 #include <def_epuck_field.h>
 
+// TEST
+#include "sensors/VL53L0X/VL53L0X.h"
+
 /*===========================================================================*/
 /* Module constants.                                                         */
 /*===========================================================================*/
@@ -86,6 +89,7 @@
 static bool is_calibrating = false;
 static bool is_setting_home = false;
 static bool is_waiting = false;
+static bool is_waiting_color = false;
 
 /*===========================================================================*/
 /* Semaphores.                                                               */
@@ -119,6 +123,7 @@ static int16_t get_speed_p(int16_t goal_distance, int16_t init_distance,
 	int16_t speed = 0;
 	int16_t error = 0;
 	int16_t distance = init_distance - sensors_tof_kalman();
+
 	error = distance - goal_distance;
 
 	if (error < -TOF_DISTANCE_MAX)
@@ -218,28 +223,43 @@ static THD_FUNCTION(thd_calibrate, arg)
 	draw_reset();
 
 	// draw first calibration point
-	if (chThdShouldTerminateX())
-		chThdExit(0);
+
+	is_waiting_color = true;
 	com_request_color(black);
 	chBSemWait(&sem_changed_color);
-
-	if (chThdShouldTerminateX())
+	is_waiting_color = false;
+	if(chThdShouldTerminateX()) {
 		chThdExit(0);
+	}
+
+	is_waiting_color = true;
 	com_request_color(white);
 	chBSemWait(&sem_changed_color);
+	is_waiting_color = false;
+	if(chThdShouldTerminateX()) {
+		chThdExit(0);
+	}
+
 	draw_move(X_DEFAULT+CALIBRATION_SQ_PX, Y_DEFAULT);
+	if(chThdShouldTerminateX()) {
+		chThdExit(0);
+	}
 
 	// draw second calibration point
-
-	if (chThdShouldTerminateX())
-		chThdExit(0);
+	is_waiting_color = true;
 	com_request_color(black);
 	chBSemWait(&sem_changed_color);
-
-	if (chThdShouldTerminateX())
+	is_waiting_color = false;
+	if(chThdShouldTerminateX()) {
 		chThdExit(0);
+	}
+	is_waiting_color = true;
 	com_request_color(white);
 	chBSemWait(&sem_changed_color);
+	is_waiting_color = false;
+	if(chThdShouldTerminateX()) {
+		chThdExit(0);
+	}
 	draw_move(X_DEFAULT, Y_DEFAULT);
 
 	// calculate expected vertical distance in steps that the robot needs to
@@ -381,6 +401,8 @@ uint16_t cal_stop_thd(void)
 		// send message to unblock chMsgWait()
 		if (is_waiting)
 			(void)chMsgSend(ptr_calibrate, 0);
+		if (is_waiting_color)
+			chBSemSignal(&sem_changed_color);
 
 		uint16_t true_diff_length = chThdWait(ptr_calibrate);
 		is_calibrating = false;
@@ -398,7 +420,7 @@ bool cal_get_state(void)
 
 void cal_signal_changed_colors(void)
 {
-	if (is_calibrating)
+	if (is_waiting_color)
 		chBSemSignal(&sem_changed_color);
 }
 

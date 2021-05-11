@@ -73,6 +73,7 @@ static void process_command(uint8_t cmd)
 			cal_stop_home_thd();
 			draw_move(X_DEFAULT, Y_DEFAULT);
 			draw_reset();
+			com_request_color(none);
 			break;
 		case CMD_PAUSE:
 			draw_pause_thd();
@@ -89,8 +90,7 @@ static void process_command(uint8_t cmd)
 				cal_create_thd();
 			break;
 		case CMD_GET_DATA:
-//			com_receive_data((BaseSequentialStream *)&SD3);
-//			send_path();
+			com_receive_data((BaseSequentialStream *)&SD3);
 			break;
 		case CMD_DRAW:
 			if ((cal_get_state() || cal_get_home_state()) == false)

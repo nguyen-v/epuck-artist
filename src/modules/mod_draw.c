@@ -51,6 +51,7 @@ static uint16_t len0_st = 0;
 
 static bool is_drawing = false;
 static bool is_paused = false;
+static bool is_waiting = false;
 
 /*===========================================================================*/
 /* Semaphores.                                                               */
@@ -137,9 +138,11 @@ static THD_FUNCTION(thd_draw, arg)
 	for(i = 0; i < length && !chThdShouldTerminateX(); ++i) {
 
 		if (color[i] != prev_color) {
+			is_waiting = true;
 			com_request_color(color[i]);
 			prev_color = color[i];
 			chBSemWait(&sem_changed_color);
+			is_waiting = false;
 		}
 
 		chSysLock();
@@ -148,7 +151,8 @@ static THD_FUNCTION(thd_draw, arg)
 		}
 		chSysUnlock();
 
-		draw_move(offset_x_pos(pos[i].x), pos[i].y);
+		if (!chThdShouldTerminateX())
+			draw_move(offset_x_pos(pos[i].x), pos[i].y);
 	}
 
 	// reset stepper position and lift pen when drawing is complete
@@ -182,7 +186,10 @@ void draw_create_thd(void)
 
 void draw_stop_thd(void)
 {
-	if(is_drawing) {
+	if (is_drawing) {
+		draw_resume_thd();
+		if (is_waiting)
+			chBSemSignal(&sem_changed_color);
 		chThdTerminate(ptr_draw);
 		chThdWait(ptr_draw);
 		is_drawing = false;
@@ -208,7 +215,7 @@ void draw_resume_thd(void)
 
 void draw_signal_changed_colors(void)
 {
-	if (is_drawing)
+	if (is_waiting)
 		chBSemSignal(&sem_changed_color);
 }
 
