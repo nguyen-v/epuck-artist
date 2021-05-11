@@ -136,7 +136,7 @@ static THD_FUNCTION(thd_draw, arg)
 	uint8_t prev_color = white;
 
 	for(i = 0; i < length && !chThdShouldTerminateX(); ++i) {
-
+//		chThdSleepMilliseconds(500); // more precise but slower
 		if (color[i] != prev_color) {
 			is_waiting = true;
 			com_request_color(color[i]);
