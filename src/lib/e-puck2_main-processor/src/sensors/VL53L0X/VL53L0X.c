@@ -30,6 +30,8 @@ static bool VL53L0X_configured = false;
  *                      it to be ready (i.e. running) alongside the thread
  *                      defined in the same file (because values need to be
  *                      stable when accessed).
+ *                      sources: https://www.youtube.com/watch?v=ruB917YmtgE
+ *                               https://en.wikipedia.org/wiki/Kalman_filter
  */
 static uint16_t kalman1d(uint16_t U)
 {

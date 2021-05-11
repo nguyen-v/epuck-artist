@@ -43,6 +43,8 @@ void com_serial_start(void)
 	sdStart(&SD3, &ser_cfg); // UART3.
 }
 
+// State machines inspired by ReceiveInt16FromComputer() from TP5
+
 uint8_t com_receive_command(BaseSequentialStream* in)
 {
 	volatile uint8_t c;
