@@ -9,15 +9,15 @@ import time
 import numpy as np
 import struct
 import threading
+from PIL import Image
 
-from PIL import Image # read image
-
-# ===========================================================================
-#  Module constants.                                                         
-# ===========================================================================
+# ========================================================================== #
+#  Module constants.                                                         # 
+# ========================================================================== #
 
 # Serial 
-SERIAL_PORT_DEFAULT         = "COM8"  
+SERIAL_PORT_DEFAULT         = "COM8"
+ARDUINO_SERIAL_PORT         = "COM22"
 SERIAL_BAUD_RATE            = 115200
 BT_BAUD_RATE                = 9600
 MAX_BUFFER_LENGTH           = 4000
@@ -59,6 +59,7 @@ PURPLE = bytes([int.from_bytes(b'\x88', "big"), int.from_bytes(b'\x1F', "big")])
 PINK   = bytes([int.from_bytes(b'\xF8', "big"), int.from_bytes(b'\x1D', "big")])
 
 # Commands
+
 COMMANDS = (
     'R'     ,   # RESET
     'P'     ,   # PAUSE
@@ -67,7 +68,7 @@ COMMANDS = (
     'B'     ,   # BEGIN CALIBRATION
     'G'     ,   # GET DATA
     'D'     ,   # DRAW
-    'I'     ,   # INTERACTIVE
+    'I'     ,   # IMAGE
     'H'     ,   # HOME
     'V'     ,   # VALIDATE
 )
@@ -107,6 +108,15 @@ SECOND_ARG_LIMIT = [0 for x in range(2) for y in range(len(COMMANDS_TWO_ARGS))]
 # assign lower and upper bounds
 SECOND_ARG_LIMIT[CMD_TWO_ARGS_INDEX['V']] = [0, 150] # in mm
 
+# ========================================================================== #
+#  Module local functions.                                                   # 
+# ========================================================================== #
+
+# @brief                    Receives data from e-puck and communicates with Arduino.
+# @param[in]   ser_epuck    E-puck serial port
+# @param[out]  ser_arduino  Arduino serial port
+# @return                   none 
+# @note                     state machine/length extraction is from TP4, plotImage.py
 def receive_data(ser_epuck, ser_arduino):
     while True:
         # state machine for proper synchronisation
@@ -195,7 +205,8 @@ def receive_data(ser_epuck, ser_arduino):
                     time.sleep(0.1)
             elif "rgb" in msg:
                 img_buffer = bytearray(len(output_buffer))
-                img_buffer[0::2] = output_buffer[1::2]
+                # Invert bytes to make it readable for BGR;16 format
+                img_buffer[0::2] = output_buffer[1::2] 
                 img_buffer[1::2] = output_buffer[0::2]
                 img = Image.frombytes("RGB", (IM_LENGTH_PX, IM_HEIGHT_PX), bytes(img_buffer), "raw", "BGR;16")
                 img_name = "rgb"
@@ -214,7 +225,7 @@ def receive_data(ser_epuck, ser_arduino):
             elif "sobel" in msg:
                 img_buffer = bytearray(2*len(output_buffer))
                 for i in range (0, length-1):
-                    # convert angle states to rgb colors
+                    # convert angle states to rgb565 colors
                     rgb = bytes([0, 0])
                     if output_buffer[i] == FIRST_OCTANT:
                         rgb = RED
@@ -242,6 +253,12 @@ def receive_data(ser_epuck, ser_arduino):
                 img.save(IMG_PATH + img_name + ".png", "PNG")
         time.sleep(0.5)
 
+# @brief                    Creates svg file from x, y and color buffers
+# @param[in]   x_buffer     Path x-coordinate buffer
+# @param[in]   y_buffer     Path y-coordinate buffer
+# @param[in]   c_buffer     Path color buffer
+# @param[in]   length       Length of each buffer
+# @return      out          String containing path information in svg format
 def create_svg(x_buffer, y_buffer, c_buffer, length):
     out = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="180" version="1.1">\n'
     polyline = ''
@@ -270,6 +287,8 @@ def create_svg(x_buffer, y_buffer, c_buffer, length):
     out += '</svg>'
     return out
 
+# @brief                    Parses argument from command line (port name)
+# @return      port         Port name
 def parse_arg():
     port = SERIAL_PORT_DEFAULT
     if len(sys.argv) == 1:
@@ -282,6 +301,11 @@ def parse_arg():
         " Default serial port is " +port)
     return port
 
+# @brief                    Attemps serial connection to specified port
+# @param[in]   port         Port name to attempt connection to
+# @param[in]   baud_rate    Serial connection baud rate
+# @param[in]   reset        True if reset command should be sent on connection
+# @return      ser          Serial connection to port
 def connect_to_port(port, baud_rate, reset):
     error_count = 0
     while error_count < ERROR_COUNT_MAX:
@@ -304,13 +328,19 @@ def connect_to_port(port, baud_rate, reset):
         " device/thread is accessing the port.")
         sys.exit(0)
 
-    # discard input and ouput buffers
-    # ser.reset_input_buffer()
-    # ser.reset_output_buffer()
+    ser.reset_input_buffer()
+    ser.reset_output_buffer()
+
     if reset == True:
         send_command(ser, 'R') # reset the e-puck when first connecting
     return ser
 
+# @brief                    Creates svg file from x, y and color buffers
+# @param[in]   x_buffer     Path x-coordinate buffer
+# @param[in]   y_buffer     Path y-coordinate buffer
+# @param[in]   c_buffer     Path color buffer
+# @param[in]   length       Length of each buffer
+# @return      out          String containing path information in svg format
 def send_command(ser, command):
     if command not in COMMANDS:
         print("Invalid command: " + str(command))
@@ -335,7 +365,6 @@ def send_command(ser, command):
         try:
             ser.reset_input_buffer()
             ser.reset_output_buffer()
-
             # send command
             ser.write(b'CMD')
             ser.write(command.encode()) # send command as bytes (utf-8)
@@ -350,58 +379,38 @@ def send_command(ser, command):
             "Connection to e-puck lost.")
         time.sleep(2) # wait for the e-puck to properly process the command
 
-        # if command == 'G':
-        #     send_move_data(ser)
+        if command == 'G':
+            send_move_data(ser)
 
-def read_serial(ser):
-    while True:
-        msg = ser.readline().decode("utf_8")
-        if CONFIRMATION_MSG in msg:
-            print("Arduino has finished changing colors.")
-        time.sleep(0.5)
-
+# @brief                    Parses command from user
+# @param[in]   ser_epuck    E-puck serial port
+# @param[out]  ser_arduino  Arduino serial port
+# @return                   none
 def request_command(ser_epuck, ser_arduino):
     while True:
         command = input("Type a command: ")
         if command != 'a':
             send_command(ser_epuck, command)
-            # receive_data(ser_epuck)
-            # time.sleep(1)
         elif command == 'a':
             command = input("Type a command (arduino): ")
             ser_arduino.write(command.encode())
 
     time.sleep(0.5)
 
+# @brief                    Returns color and position buffers manually defined
+# @return      data_color   Buffer containing color data
+# @return      data_pos     Buffer containing position data
 def get_data():
-    # data_color = np.array([0, 4, 6], dtype = np.uint8)                               # rewrite
-    data_color = np.array([0, 1, 0, 3, 4, 2], dtype = np.uint8)                               # rewrite
-    # data_pos = np.array([[430, 0]], dtype = np.uint16)
-    # data_pos = np.array([[512, 0], [612, 0], [612, 50], [512, 50], [512, 0]], dtype = np.uint16) # 2 squares
-    # data_pos = np.array([[512, 0], [463, 0],[467, 26], [461, 49], [435, 89],[415, 138], [404, 158], [417, 164], [448, 139], [450, 104], [449, 154], [455, 187], [481, 186], [477, 163], [474, 284], [487, 294], [500, 289], [502, 268], [482, 268], [481, 263], [481, 285], [494, 285], [481, 263],[494, 269], [501, 267], [508, 188], [516, 160], [509, 188], [534, 186],[553, 152], [541, 175], [568, 157], [568, 127], [542, 59], [544, 0], [512, 0]], dtype = np.uint16)
-    # data_pos = np.array([[512, 0], [562, 0],[562, 50], [512, 50], [512, 0],[512, 100], [562, 100], [562, 50], [562, 0], [512, 0]], dtype = np.uint16)
-    # data_pos = np.array([[513, 0], [578, 14], [627,48 ], [657, 96], [669, 154], [657,213 ], [622, 263], [571, 297], [516, 307], [454, 296], [404, 261], [372,210 ], [360, 149], [373, 93], [407,45 ], [447, 15], [512, 0]], dtype = np.uint16) # circle
-     # data_pos = np.array([[512, 0], [562, 0],[562, 50], [512, 50], [512, 0],[512, 100], [562, 100], [562, 50], [562, 0], [512, 0]], dtype = np.uint16)
-    # data_pos = np.array([[512, 0], [600, 0]], dtype = np.uint16) # long line
-    # data_pos = np.array([[512, 0],[512, 30], [512, 0], [612, 0],[512, 0], [412, 0], [512, 0]], dtype = np.uint16) # y test
-    # data_pos = np.array([[512, 0],[512, 100], [512, 200],[412, 200], [312, 200], [312, 100],[312, 0],[412, 0],[512, 0], [512, 100], [512, 200],[612, 200], [712, 200], [712, 100],[712, 0],[612, 0],[512, 0]], dtype = np.uint16) # square test
 
-    # data_pos = np.array([[512, 0], [512, 100], [512, 200],[412, 200], [312, 200], [312, 100],[312, 0],[412, 0],[512, 0]], dtype = np.uint16) # LEFT square test
-    # data_pos = np.array([[512, 0], [512, 100], [612, 100], [612, 0], [512, 0]], dtype = np.uint16) # RIGHT square test
-    # data_pos = np.array([[512, 0], [612, 0], [612, 100], [612, 200], [512, 200], [412, 200], [412,100], [412, 0], [512, 0]], dtype = np.uint16) # RIGHT square test    
-    data_pos = np.array([[100, 0], [200, 0], [200, 200], [0, 200], [0, 0],[100, 0]], dtype = np.uint16) # TILTED square test    
-    # data_pos = np.array([[512, 0],[512, 150]], dtype = np.uint16) # going down
-    # data_pos = np.array([[480, 0]], dtype = np.uint16) # y test
-    
-    # data_pos = np.array([[512, 0], [512, 5], [517,5 ], [517, 0], [512, 0]], dtype = np.uint16) # circle
-    # data_pos = np.array([[512, 0], [570, 0], [512, 0], [560, 20], [512, 0], [550, 40],[512, 0],[540, 70],[512, 0],[530, 80],[512, 0],[520, 90],[512, 0],[512, 100],[512, 0]], dtype = np.uint16)
+    # Test data to send can be defined here
+    data_color = np.array([0, 1, 1, 1, 1, 1], dtype = np.uint8) 
+    data_pos = np.array([[100, 0], [150, 0], [150, 150], [0, 150], [0, 0],[100, 0]], dtype = np.uint16) # square test    
 
-
-    # data_pos = np.array([[404, 158], [417, 164],[512, 0]], dtype = np.uint16)
-    # data_pos = np.array([[400, 0],[400, 200], [200, 200], [200, 0], [400, 0]], dtype = np.uint16)
-    # maybe verify that arrays are of the same size
     return data_color, data_pos
 
+# @brief                    Manually send color and path data to e-puck
+# @param[in]   ser          Output port
+# @return                   none
 def send_move_data(ser):
     data_color, data_pos = get_data()
     size = np.array([len(data_pos)], dtype=np.uint16)
@@ -411,7 +420,7 @@ def send_move_data(ser):
     while(i < size[0]):
         
         # convert as unsigned char, integer, 1 byte
-        send_buffer += struct.pack('B', data_color[i])     # color
+        send_buffer += struct.pack('B', data_color[i])      # color
         # convert as unsigned short int, 2 bytes
         send_buffer += struct.pack('<H', data_pos[i][0])    # x
         send_buffer += struct.pack('<H', data_pos[i][1])    # y
@@ -420,7 +429,6 @@ def send_move_data(ser):
     print("Sending move data to the e-puck...")
     ser.reset_input_buffer()
     ser.reset_output_buffer()
-    # ser.write(b'MOVE')
     ser.write(struct.pack('<h',size[0]))
 
     ser.write(send_buffer)
@@ -428,16 +436,16 @@ def send_move_data(ser):
 
 
         
-# ===========================================================================
-#  Functions.                                                         
-# ===========================================================================
+# ========================================================================== #
+#  Main function.                                                            # 
+# ========================================================================== #
 
-# Main function =============================================================
-
+# @brief                    Main function. Initializes threads.
+# @return                   none
 def main():
     port = parse_arg()
     ser_epuck = connect_to_port(port, SERIAL_BAUD_RATE, True)
-    ser_arduino = connect_to_port("COM22", BT_BAUD_RATE, False)
+    ser_arduino = connect_to_port(ARDUINO_SERIAL_PORT, BT_BAUD_RATE, False)
 
     request_cmd = threading.Thread(target = request_command, args = (ser_epuck, ser_arduino))
     request_cmd.setDaemon(True)
