@@ -624,7 +624,7 @@ static THD_FUNCTION(thd_capture_image, arg) {
 	dcmi_disable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
-
+	chThdSleepMilliseconds(1000);
 	while(1){
 		chBSemWait(&sem_capture_image);
 		dcmi_capture_start();
