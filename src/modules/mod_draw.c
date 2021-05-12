@@ -227,7 +227,7 @@ bool draw_get_state(void)
 void draw_set_init_length(float y_length)
 {
 	y0_st = CM_TO_STEP*y_length;
-	len0_st = sqrt(x0_st*x0_st + y0_st*y0_st);
+	len0_st = sqrtf(x0_st*x0_st + y0_st*y0_st);
 }
 
 uint16_t draw_get_length_av_current(void)
@@ -245,8 +245,8 @@ uint16_t draw_get_length_av_next(uint16_t x, uint16_t y)
 	uint16_t x_r_st = SUPPORT_DISTANCE_ST - SPOOL_DISTANCE_ST/2 - MARGIN_ST - x_st;
 
 	// calculate next length
-	uint16_t len_l = sqrt(x_l_st*x_l_st + y_st*y_st);
-	uint16_t len_r = sqrt(x_r_st*x_r_st + y_st*y_st);
+	uint16_t len_l = sqrtf(x_l_st*x_l_st + y_st*y_st);
+	uint16_t len_r = sqrtf(x_r_st*x_r_st + y_st*y_st);
 	return (len_r+len_l)/2;
 }
 
@@ -265,8 +265,8 @@ void draw_move(uint16_t x, uint16_t y)
 	uint16_t x_r_st = SUPPORT_DISTANCE_ST - SPOOL_DISTANCE_ST/2 - MARGIN_ST - x_st;
 
 	// calculate next length
-	uint16_t len_l = sqrt(x_l_st*x_l_st + y_st*y_st);
-	uint16_t len_r = sqrt(x_r_st*x_r_st + y_st*y_st);
+	uint16_t len_l = sqrtf(x_l_st*x_l_st + y_st*y_st);
+	uint16_t len_r = sqrtf(x_r_st*x_r_st + y_st*y_st);
 
 	// move until next length
 	while (abs(len_l-len_l_current)>STEP_THRESHOLD || abs(len_r-len_r_current)>STEP_THRESHOLD) {

@@ -4,22 +4,25 @@
  */
 
 // C standard header files
+
 #include <math.h>
+//#include <arm_math.h>
 #include <stdlib.h>
 
 // ChibiOS headers
+
 #include "ch.h"
 #include "hal.h"
 #include <chprintf.h>
 #include <usbcfg.h>
 
+// e-puck 2 main processor headers
+
 #include <camera/po8030.h>
 #include "camera/dcmi_camera.h"
 
-#include <arm_math.h>
-
-
 // Module headers
+
 #include <mod_img_processing.h>
 #include <mod_path.h>
 #include <mod_communication.h>
@@ -266,11 +269,11 @@ static float sobel_filter(void)
 					++k;
 				}
 			}
-			I_mag[pos] = sqrt(Ix*Ix + Iy*Iy);
+			I_mag[pos] = sqrtf(Ix*Ix + Iy*Iy);
 			if(I_mag[pos]>max)
 				max = I_mag[pos];
 
-			theta = atan2((float)Ix , (float)Iy)*RAD2DEG;
+			theta = atan2f((float)Ix , (float)Iy)*RAD2DEG;
 
 			if((theta > FIRST_OCTANT_L && theta <= FIRST_OCTANT_H)){
 				sobel_angle_state[pos] = first_octant;
