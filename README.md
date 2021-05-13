@@ -1,6 +1,6 @@
 
 # epuck-artist
-![Alt text](https://github.com/nguyen-v/epuck-artist/blob/master/misc/banner.png?raw=true "Title")
+<img src="./misc/banner.png"/>
 An edge processing, 4-color equipped wall plotter. Embedded Systems and Robotics semester project @EPFL using the e-puck 2 robot from GCtronic.
 
 ## Features
