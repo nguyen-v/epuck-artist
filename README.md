@@ -36,4 +36,4 @@ Embedded Systems and Robotics semester project @EPFL using the e-puck 2 robot fr
 ## Demo:
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=znKsJ0n5lfQ
 " target="_blank"><img src="https://i.imgur.com/wOXOsNd.png" 
-alt="IMAGE ALT TEXT HERE" width="1280" height="580" border="10" /></a>
+alt="IMAGE ALT TEXT HERE" width="1280" height="545.625" border="10" /></a>
