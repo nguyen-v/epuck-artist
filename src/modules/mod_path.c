@@ -62,6 +62,7 @@
 // Module headers
 
 #include <mod_path.h>
+#include <mod_draw.h>
 #include <tools.h>
 #include <mod_img_processing.h>
 #include <mod_communication.h>
@@ -118,8 +119,8 @@ static uint8_t* status;
  * @return                      none
  */
 static void path_tracing(uint8_t* img_buffer, uint8_t* color,
-		                  edge_track *contours,  edge_pos *edges,
-                          uint16_t* size_contours, uint16_t* size_edges)
+                         edge_track *contours,  edge_pos *edges,
+                         uint16_t* size_contours, uint16_t* size_edges)
 {
 	// max has to be at STRONG_PIXEL (because of output of canny_edge).
 	// Other values are chosen arbitrarily.
@@ -306,10 +307,13 @@ static void path_tracing(uint8_t* img_buffer, uint8_t* color,
 						pos -= (dx+dy);
 						--x_temp; --y_temp;
 					}
+
 					// Then, check max pixels or starting position.
-					// Note: we don't want to connect back to starting position
-					//       if line length is 2 px
-					// *size_contours-1 != edges[edge_index-1].index handles this
+
+					/** note: we don't want to connect back to starting position
+					  *       if line length is 2 px
+					  *       *size_contours-1 != edges[edge_index-1].index handles this
+					  */
 
 					else if(img_buffer[pos+dx]==max || (img_buffer[pos+dx]==begin
 					         && *size_contours-1 != edges[edge_index-1].index)) {
@@ -849,7 +853,7 @@ void path_planning(void)
 	create_final_path(color, size_edges, final_path);
 	data_realloc_color(total_size);
 
-	img_resize(final_path, 200, 200); // magic numbers to define in mod_draw.h
+	img_resize(final_path, IM_MAX_WIDTH, IM_MAX_HEIGHT);
 
 	data_set_ready(true);
 
