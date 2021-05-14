@@ -4,7 +4,7 @@
 
 An edge processing, 4-color equipped wall plotter. 
 
-Embedded Systems and Robotics semester project @EPFL using the e-puck 2 robot from [GCtronic](https://www.gctronic.com/).
+Embedded Systems and Robotics semester project at [EPFL](https://www.epfl.ch/) using the e-puck 2 robot from [GCtronic](https://www.gctronic.com/).
 
 ## Features
 - Reproduction of any subject (100 x 90) in 4 different colors
