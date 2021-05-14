@@ -388,7 +388,7 @@ void cal_create_thd(void)
 {
 	if (!is_calibrating) {
 		ptr_calibrate = chThdCreateStatic(wa_calibrate, sizeof(wa_calibrate),
-		                                  NORMALPRIO, thd_calibrate, NULL);
+		                                  NORMALPRIO+1, thd_calibrate, NULL);
 		is_calibrating = true;
 	}
 }
@@ -397,6 +397,7 @@ uint16_t cal_stop_thd(void)
 {
 	if (is_calibrating) {
 
+		is_calibrating = false;
 		chThdTerminate(ptr_calibrate);
 		// send message to unblock chMsgWait()
 		if (is_waiting)
@@ -405,7 +406,6 @@ uint16_t cal_stop_thd(void)
 			chBSemSignal(&sem_changed_color);
 
 		uint16_t true_diff_length = chThdWait(ptr_calibrate);
-		is_calibrating = false;
 
 		// return true length difference (steps)
 		return true_diff_length;
