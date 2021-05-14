@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="180" version="1.1">
+<polyline points="92,8,86,24" stroke="black" stroke-width="2" fill="none" />
+<polyline points="84,18,80,18,80,14,74,8" stroke="black" stroke-width="2" fill="none" />
+<polyline points="80,18,80,20" stroke="black" stroke-width="2" fill="none" />
+<polyline points="76,24,74,22,40,24" stroke="black" stroke-width="2" fill="none" />
+<polyline points="24,8,28,10,30,18,36,24,20,56,18,66,10,66,8,60" stroke="black" stroke-width="2" fill="none" />
+<polyline points="10,66,8,82" stroke="blue" stroke-width="2" fill="none" />
+<polyline points="16,68,18,70,14,74,18,74,20,82,32,96,38,110,42,112,22,150,20,162,26,170" stroke="black" stroke-width="2" fill="none" />
+<polyline points="20,162,18,162" stroke="black" stroke-width="2" fill="none" />
+<polyline points="18,154,14,156,12,170" stroke="blue" stroke-width="2" fill="none" />
+<polyline points="10,160,8,160" stroke="black" stroke-width="2" fill="none" />
+<polyline points="26,156,34,158,62,156" stroke="black" stroke-width="2" fill="none" />
+<polyline points="76,170,66,154,84,120,84,112,86,112,84,100,72,86,62,66,22,68" stroke="black" stroke-width="2" fill="none" />
+<polyline points="64,64,80,26,90,28,90,32,94,34,100,48,104,50,104,54,112,64,152,62" stroke="black" stroke-width="2" fill="none" />
+<polyline points="156,60,158,58" stroke="black" stroke-width="2" fill="none" />
+<polyline points="164,56,182,16,180,10,176,8" stroke="black" stroke-width="2" fill="none" />
+<polyline points="188,16,190,16" stroke="black" stroke-width="2" fill="none" />
+<polyline points="190,60,184,60,178,60,172,60,168,60" stroke="black" stroke-width="2" fill="none" />
+<polyline points="162,66,156,64,150,84,138,104" stroke="blue" stroke-width="2" fill="none" />
+<polyline points="94,106,100,86,112,64" stroke="blue" stroke-width="2" fill="none" />
+<polyline points="128,20,126,18,100,22,92,20" stroke="black" stroke-width="2" fill="none" />
+<polyline points="138,8,132,20,148,40,154,54,158,58,164,58,162,66,168,70,174,84,190,104,184,110,182,120,172,136,170,152,168,152,180,170" stroke="black" stroke-width="2" fill="none" />
+<polyline points="168,154,166,154" stroke="black" stroke-width="2" fill="none" />
+<polyline points="166,146,162,146,162,142,158,140,158,136,154,134,154,130,150,128,148,120,144,118,138,106,134,108,128,108,122,108,116,108,110,108,104,108,98,108,92,108,90,106" stroke="black" stroke-width="2" fill="none" />
+<polyline points="92,112,100,128,104,130,104,134,108,136,110,144,118,152,108,170" stroke="black" stroke-width="2" fill="none" />
+<polyline points="122,152,156,150,158,152" stroke="black" stroke-width="2" fill="none" />
+<polyline points="162,146,162,152,162,158,154,170" stroke="blue" stroke-width="2" fill="none" />
+<polyline points="174,148,178,150,190,148" stroke="black" stroke-width="2" fill="none" />
+<polyline points="88,114,86,112" stroke="black" stroke-width="2" fill="none" />
+<polyline points="84,112,82,110,46,112" stroke="black" stroke-width="2" fill="none" />
+</svg>
