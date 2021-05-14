@@ -97,7 +97,8 @@ static void process_command(uint8_t cmd)
 				draw_create_thd();
 			break;
 		case CMD_IMAGE:
-			capture_image();
+			if (draw_get_state() == false)
+				capture_image();
 			break;
 		case CMD_HOME:
 			if ((draw_get_state() || cal_get_state()) == false)
