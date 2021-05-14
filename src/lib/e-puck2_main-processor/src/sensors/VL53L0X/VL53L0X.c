@@ -15,39 +15,8 @@
 #include "usbcfg.h"
 
 static uint16_t dist_mm = 0;
-static uint16_t dist_mm_kalman = 0;
 static thread_t *distThd;
 static bool VL53L0X_configured = false;
-
-#define OBSERVED_NOISE_COVARIANCE 6.5f
-
-
-/**
- * @brief               1D Kalman filter
- *
- * @return              filtered value
- * @note                Kalman filter is defined in VL53L0X.c because we want
- *                      it to be ready (i.e. running) alongside the thread
- *                      defined in the same file (because values need to be
- *                      stable when accessed).
- *                      sources: https://www.youtube.com/watch?v=ruB917YmtgE
- *                               https://en.wikipedia.org/wiki/Kalman_filter
- */
-static uint16_t kalman1d(uint16_t U)
-{
-	static const float R = OBSERVED_NOISE_COVARIANCE;
-	static const float H = 1.00;		// observation model
-	static float Q = 1.0;				// initial estimated covariance
-	static float P = 0;				// initial error covariance
-	static uint16_t U_hat = 0;			// initial predicted state
-	static float K = 0;
-
-	K = P*H/(H*P*H+R);					// calculate Kalman gain
-	U_hat = U_hat + K*(U-H*U_hat);		// updated state estimate
-	P = (1-K*H)*P +Q;					// updated estimate covariance
-	return U_hat;
-}
-
 
 //////////////////// PUBLIC FUNCTIONS /////////////////////////
 static THD_WORKING_AREA(waVL53L0XThd, 512);
@@ -78,7 +47,6 @@ static THD_FUNCTION(VL53L0XThd, arg) {
     	if(VL53L0X_configured){
     		VL53L0X_getLastMeasure(&device);
    			dist_mm = device.Data.LastRangeMeasure.RangeMilliMeter;
-   			dist_mm_kalman = kalman1d(dist_mm);
     	}
 		chThdSleepMilliseconds(100);
     }
@@ -275,9 +243,5 @@ void VL53L0X_stop(void) {
 
 uint16_t VL53L0X_get_dist_mm(void) {
 	return dist_mm;
-}
-
-uint16_t VL53L0X_get_dist_mm_kalman(void) {
-	return dist_mm_kalman;
 }
 

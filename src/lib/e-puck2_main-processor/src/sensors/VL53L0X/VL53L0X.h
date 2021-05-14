@@ -79,5 +79,5 @@ void VL53L0X_stop(void);
  * @return 			Last distance measured in mm
  */	
 uint16_t VL53L0X_get_dist_mm(void);
-uint16_t VL53L0X_get_dist_mm_kalman(void);
+
 #endif /* VL53L0X_H*/

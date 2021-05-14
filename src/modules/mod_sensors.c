@@ -27,6 +27,7 @@
 
 #include <mod_sensors.h>
 #include <mod_communication.h>
+#include <mod_calibration.h>
 #include <mod_data.h>
 #include <mod_state.h>
 
@@ -36,6 +37,9 @@
 
 #define BLINK_PERIOD       200
 #define BLINK_MAX_COUNT    3
+#define TOF_PERIOD         100
+
+#define OBSERVED_NOISE_COVARIANCE 6.5f
 
 /*===========================================================================*/
 /* Bus related declarations.                                                 */
@@ -46,6 +50,81 @@ MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
 
 /*===========================================================================*/
+/* Module local variables.                                                   */
+/*===========================================================================*/
+
+static uint16_t dist_mm_kalman = 0;
+
+/*===========================================================================*/
+/* Module thread pointers.                                                   */
+/*===========================================================================*/
+
+static thread_t* ptr_tof_kalman;
+
+/*===========================================================================*/
+/* Module local functions.                                                   */
+/*===========================================================================*/
+
+
+/**
+ * @brief               1D Kalman filter
+ *
+ * @return              filtered value
+ * @note                Kalman filter is defined in VL53L0X.c because we want
+ *                      it to be ready (i.e. running) alongside the thread
+ *                      defined in the same file (because values need to be
+ *                      stable when accessed).
+ *                      sources: https://www.youtube.com/watch?v=ruB917YmtgE
+ *                               https://en.wikipedia.org/wiki/Kalman_filter
+ */
+static uint16_t kalman1d(uint16_t U)
+{
+	static const float R = OBSERVED_NOISE_COVARIANCE;
+	static const float H = 1.00;		// observation model
+	static float Q = 1.0;				// initial estimated covariance
+	static float P = 0;				// initial error covariance
+	static uint16_t U_hat = 0;			// initial predicted state
+	static float K = 0;
+
+	K = P*H/(H*P*H+R);					// calculate Kalman gain
+	U_hat = U_hat + K*(U-H*U_hat);		// updated state estimate
+	P = (1-K*H)*P +Q;					// updated estimate covariance
+	return U_hat;
+}
+
+
+
+/*===========================================================================*/
+/* Module threads.                                                           */
+/*===========================================================================*/
+
+/**
+ * @brief   Thread for applying Kalman filter to TOF measurements.
+ */
+static THD_WORKING_AREA(wa_tof_kalman, 256);
+static THD_FUNCTION(thd_tof_kalman, arg) {
+
+	chRegSetThreadName(__FUNCTION__);
+	(void)arg;
+
+	while(1) {
+		dist_mm_kalman = kalman1d(VL53L0X_get_dist_mm());
+//		chprintf((BaseSequentialStream *)&SDU1, "dist %d", dist_mm_kalman);
+		chThdSleepMilliseconds(TOF_PERIOD);
+	}
+}
+
+/**
+ * @brief            Create TOF measurement thread with Kalman filter
+ * @return           none
+ */
+static void tof_kalman_create_thd(void)
+{
+	ptr_tof_kalman = chThdCreateStatic(wa_tof_kalman, sizeof(wa_tof_kalman),
+	                                   NORMALPRIO, thd_tof_kalman, NULL);
+}
+
+/*===========================================================================*/
 /* Module exported functions.                                                */
 /*===========================================================================*/
 
@@ -54,13 +133,14 @@ void sensors_init(void)
 	messagebus_init(&bus, &bus_lock, &bus_condvar);
 	proximity_start();
 	VL53L0X_start();
+	tof_kalman_create_thd();
 	calibrate_ir();
 }
 
 
 uint16_t sensors_tof_kalman(void)
 {
-	return VL53L0X_get_dist_mm_kalman();
+	return dist_mm_kalman;
 }
 
 
@@ -72,8 +152,8 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 	uint16_t current_dist = 0;
 	uint16_t prev_dist = current_dist;
 
-	while (state != 4) {
-		current_dist = sensors_tof_kalman();
+	while (state != 4 && cal_get_state() == true) {
+		current_dist = dist_mm_kalman;
 		if(state == 0) {
 			// turn off the leds
 			palSetPad(GPIOD, GPIOD_LED1);
@@ -87,7 +167,7 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 			prev_dist = current_dist;
 			palClearPad(GPIOD, GPIOD_LED1);
 			chThdSleepMilliseconds(time_interval);
-			current_dist = sensors_tof_kalman();
+			current_dist = dist_mm_kalman;
 		} else {
 			state = 0;
 		}
@@ -98,7 +178,7 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 			prev_dist = current_dist;
 			palClearPad(GPIOD, GPIOD_LED3);
 			chThdSleepMilliseconds(time_interval);
-			current_dist = sensors_tof_kalman();
+			current_dist = dist_mm_kalman;
 		} else {
 			state = 0;
 		}
@@ -109,7 +189,7 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 			prev_dist = current_dist;
 			palClearPad(GPIOD, GPIOD_LED5);
 			chThdSleepMilliseconds(time_interval);
-			current_dist = sensors_tof_kalman();
+			current_dist = dist_mm_kalman;
 		} else {
 			state = 0;
 		}
@@ -123,6 +203,7 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 		} else {
 			state = 0;
 		}
+		chThdSleepMilliseconds(TOF_PERIOD);
 	}
 
 	// blink leds on success
