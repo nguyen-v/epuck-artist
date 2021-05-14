@@ -1,6 +1,7 @@
 /**
  * @file    mod_draw.c
  * @brief   Module for moving the robot to XY coordinates.
+ * @note    TRESHV constant was put to 1 in motors.c (more precision at low speeds)
  */
 
 // C standard header files
