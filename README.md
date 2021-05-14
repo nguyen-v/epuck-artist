@@ -23,6 +23,10 @@ Embedded Systems and Robotics semester project at [EPFL](https://www.epfl.ch/) u
   - ServoTimer2
   - Stepper
 
+### Eclipse IDE
+#### Libraries
+  - [e-puck2_main_processor](https://github.com/e-puck2/e-puck2_main-processor) [(wiki)](https://www.gctronic.com/doc/index.php?title=e-puck2_robot_side_development)
+
 ### Hardware
 | Peripheral                  | Model                                                                                                    |
 |-----------------------------|----------------------------------------------------------------------------------------------------------|
