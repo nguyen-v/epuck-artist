@@ -33,7 +33,24 @@ Embedded Systems and Robotics semester project @EPFL using the e-puck 2 robot fr
 | Stepper motor and driver    | [Gear Stepper Motor Driver Pack](https://www.seeedstudio.com/Gear-Stepper-Motor-Driver-Pack-p-3200.html) |
 
 
-## Demo:
+## Demos:
+### Live demo
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=znKsJ0n5lfQ
 " target="_blank"><img src="https://i.imgur.com/wOXOsNd.png" 
+alt="IMAGE ALT TEXT HERE" /></a>
+
+### Timelapses
+#### Colorful concentric circles
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=ZIJO9M60r-s
+" target="_blank"><img src="https://i.imgur.com/PPv8ymH.jpg" 
+alt="IMAGE ALT TEXT HERE" /></a>
+
+#### Cubes
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=i3Xt1w0KOP0
+" target="_blank"><img src="https://i.imgur.com/jQVq5HA.jpg" 
+alt="IMAGE ALT TEXT HERE" /></a>
+
+#### GCtronic logo
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=iaR-Tps1SmQ
+" target="_blank"><img src="https://i.imgur.com/MM49DA3.jpg" 
 alt="IMAGE ALT TEXT HERE" /></a>
