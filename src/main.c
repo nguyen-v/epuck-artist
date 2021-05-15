@@ -3,9 +3,6 @@
  * @brief   Main file. Handles interactions between modules.
  */
 
-// C standard header files
-
-
 // ChibiOS headers
 
 #include "ch.h"
@@ -15,9 +12,9 @@
 #include <usbcfg.h>
 #include <motors.h>
 
+// e-puck 2 main processor headers
 
 #include <camera/po8030.h>
-
 #include "camera/dcmi_camera.h"
 
 
@@ -44,7 +41,7 @@ static void init_all(void)
 	halInit();
 	chSysInit();
 	mpu_init();
-//	usb_start();
+//	usb_start(); // uncomment if using chprintf on SDU1
 	dcmi_start();
 	po8030_start();
 	com_serial_start();

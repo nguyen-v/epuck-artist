@@ -29,14 +29,12 @@ typedef enum Colors {
 
 /**
  * @brief               Returns pointer to position buffer
- * @param               none
  * @return              pointer to position buffer
  */
 cartesian_coord* data_get_pos(void);
 
 /**
  * @brief               Returns pointer to color buffer
- * @param               none
  * @return              pointer to color buffer
  */
 uint8_t* data_get_color(void);
@@ -47,13 +45,11 @@ uint8_t* data_get_color(void);
  * @return              none
  */
 
-
 void data_set_length(uint16_t length);
 
 /**
  * @brief               Returns the length of position/color buffers
  *                      (number of coordinates)
- * @param               none
  * @return              Number of coordinates
  */
 uint16_t data_get_length(void);
@@ -65,10 +61,17 @@ uint16_t data_get_length(void);
  */
 void data_free(void);
 
+/**
+ * @brief               Resets path position buffer
+ * @return              none
+ */
 void data_free_pos(void);
 
+/**
+ * @brief               Resets path color buffer
+ * @return              none
+ */
 void data_free_color(void);
-
 
 /**
  * @brief               Allocates memory for the position buffer.

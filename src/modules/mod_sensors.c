@@ -80,15 +80,15 @@ static thread_t* ptr_tof_kalman;
 static uint16_t kalman1d(uint16_t U)
 {
 	static const float R = OBSERVED_NOISE_COVARIANCE;
-	static const float H = 1.00;		// observation model
-	static float Q = 1.0;				// initial estimated covariance
-	static float P = 0;				// initial error covariance
-	static uint16_t U_hat = 0;			// initial predicted state
+	static const float H = 1.00;       // observation model
+	static float Q = 1.0;              // initial estimated covariance
+	static float P = 0;                // initial error covariance
+	static uint16_t U_hat = 0;         // initial predicted state
 	static float K = 0;
 
-	K = P*H/(H*P*H+R);					// calculate Kalman gain
-	U_hat = U_hat + K*(U-H*U_hat);		// updated state estimate
-	P = (1-K*H)*P +Q;					// updated estimate covariance
+	K = P*H/(H*P*H+R);                 // calculate Kalman gain
+	U_hat = U_hat + K*(U-H*U_hat);     // updated state estimate
+	P = (1-K*H)*P +Q;                  // updated estimate covariance
 	return U_hat;
 }
 
