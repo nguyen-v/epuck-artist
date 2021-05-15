@@ -136,10 +136,12 @@ uint8_t* data_realloc_color(uint16_t length)
 	return color;
 }
 
-void data_set_ready(bool state) {
+void data_set_ready(bool state)
+{
 	data_is_ready = state;
 }
 
-bool data_get_state(void) {
+bool data_get_state(void)
+{
 	return data_is_ready;
 }
