@@ -52,8 +52,4 @@ void capture_image(void);
  */
 uint8_t* get_img_buffer(void);
 
-// THESE WILL BE PROPERLY DEFINED IN mod_communication (see mod_state branch)
-void send_image(void);
-void send_image_half(void);
-
 #endif /* _MOD_IMG_PROCESSING_H_ */
