@@ -6,7 +6,6 @@
 // C standard header files
 
 #include <math.h>
-//#include <arm_math.h>
 #include <stdlib.h>
 
 // ChibiOS headers
@@ -35,20 +34,24 @@
 /*===========================================================================*/
 
 // Buffer size
+
 #define IM_LENGTH_PX       100
 #define IM_HEIGHT_PX       90
 
 // Convolution offsets
+
 #define XY_OFFSET_5x5      2
 #define XY_OFFSET_3x3      1
 
 #define MARGIN_PX          4
 
 // Conversion coefficients
+
 #define RAD2DEG            180./M_PI
 #define DEG2RAD            M_PI/180.
 
 // Octant limits in degree
+
 #define FIRST_OCTANT_L     -22.5f
 #define FIRST_OCTANT_H     22.5f
 
@@ -82,9 +85,11 @@
 
 // If the maximum of all pixels in I_mag is under this value,
 // the picture is considered pitch black
+
 #define MIN_I_MAG          100.0
 
 // Color masks for RGB565 image format
+
 #define RED_MASK           0xF800
 #define GREEN_MASK         0x7E0
 #define BLUE_MASK          0x1F
@@ -108,12 +113,11 @@
 #define NUMBER_COLORS      3
 
 // Camera settings
+
 #define CAMERA_CONTRAST    150
 #define CAMERA_SUBSAMPLING 4
 #define CAMERA_X_POS       ((PO8030_MAX_WIDTH-CAMERA_SUBSAMPLING*IM_LENGTH_PX)/2)
 #define CAMERA_Y_POS       0
-
-
 
 #define KER_DIV 159
 
@@ -193,7 +197,7 @@ static void set_grayscale_filter_colors(uint8_t* color)
 {
 	rgb_color rgb;
 //	uint8_t red_px, green_px, blue_px = 0;
-	for(uint16_t i = 0; i < (IM_LENGTH_PX * IM_HEIGHT_PX)*2; i+=2){
+	for (uint16_t i = 0; i < (IM_LENGTH_PX * IM_HEIGHT_PX)*2; i+=2){
 
 		// extract RGB values and convert to range 0-255
 		uint16_t rgb_565 = ((int16_t)img_buffer[i]  << 8) | img_buffer[i+1];
@@ -219,8 +223,8 @@ static void set_grayscale_filter_colors(uint8_t* color)
 static void gaussian_filter(void)
 {
 	uint16_t pos = 0;
-	for(uint8_t x = 0; x < IM_LENGTH_PX; ++x){
-		for(uint8_t y = 0; y < IM_HEIGHT_PX; ++y){
+	for (uint8_t x = 0; x < IM_LENGTH_PX; ++x){
+		for (uint8_t y = 0; y < IM_HEIGHT_PX; ++y){
 			pos = position(x,y);
 			if (x < XY_OFFSET_5x5 || x >= (IM_LENGTH_PX - XY_OFFSET_5x5)
 			    || y < XY_OFFSET_5x5 || y >= (IM_HEIGHT_PX - XY_OFFSET_5x5)) {
@@ -229,8 +233,8 @@ static void gaussian_filter(void)
 			}
 			uint16_t conv = 0;
 			uint16_t k = 0;
-			for(int8_t x_ker = -XY_OFFSET_5x5; x_ker <= XY_OFFSET_5x5; ++x_ker){
-				for(int8_t y_ker = -XY_OFFSET_5x5; y_ker <= XY_OFFSET_5x5; ++y_ker){
+			for (int8_t x_ker = -XY_OFFSET_5x5; x_ker <= XY_OFFSET_5x5; ++x_ker){
+				for (int8_t y_ker = -XY_OFFSET_5x5; y_ker <= XY_OFFSET_5x5; ++y_ker){
 					conv += img_buffer[pos + x_ker +(y_ker * IM_LENGTH_PX)]*Gaus5x5[k];
 //					__SMMLA(img_buffer[position + x_ker +(y_ker * IM_LENGTH_PX)],Gaus5x5[k],conv);
 					++k;
@@ -254,14 +258,14 @@ static float sobel_filter(void)
 	float max = 0;
 	float theta = 0;
 	uint16_t pos = 0;
-	for(uint8_t x = XY_OFFSET_3x3; x < IM_LENGTH_PX-XY_OFFSET_3x3; ++x){
-		for(uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y){
+	for (uint8_t x = XY_OFFSET_3x3; x < IM_LENGTH_PX-XY_OFFSET_3x3; ++x){
+		for (uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y){
 			pos = position(x,y);
 			int16_t Ix = 10;
 			int16_t Iy = 0;
 			uint16_t k = 0;
-			for(int8_t x_ker = -XY_OFFSET_3x3; x_ker <= XY_OFFSET_3x3; ++x_ker){
-				for(int8_t y_ker = -XY_OFFSET_3x3; y_ker <= XY_OFFSET_3x3; ++y_ker){
+			for (int8_t x_ker = -XY_OFFSET_3x3; x_ker <= XY_OFFSET_3x3; ++x_ker){
+				for (int8_t y_ker = -XY_OFFSET_3x3; y_ker <= XY_OFFSET_3x3; ++y_ker){
 					Ix += img_temp_buffer[pos + x_ker +(y_ker * IM_LENGTH_PX)]*Kx[k];
 					Iy += img_temp_buffer[pos+ x_ker +(y_ker * IM_LENGTH_PX)]*Ky[k];
 //					Ix = (int16_t)__SMMLA((int32_t)(img_temp_buffer[pos + x_ker +(y_ker * IM_LENGTH_PX)]), (int32_t)(Kx[k]), (int32_t)Ix);
@@ -270,12 +274,12 @@ static float sobel_filter(void)
 				}
 			}
 			I_mag[pos] = sqrtf(Ix*Ix + Iy*Iy);
-			if(I_mag[pos]>max)
+			if (I_mag[pos]>max)
 				max = I_mag[pos];
 
 			theta = atan2f((float)Ix , (float)Iy)*RAD2DEG;
 
-			if((theta > FIRST_OCTANT_L && theta <= FIRST_OCTANT_H)){
+			if ((theta > FIRST_OCTANT_L && theta <= FIRST_OCTANT_H)){
 				sobel_angle_state[pos] = first_octant;
 			} else if ((theta > SECOND_OCTANT_L && theta <= SECOND_OCTANT_H)){
 				sobel_angle_state[pos] = second_octant;
@@ -313,8 +317,8 @@ static void set_strong_pixel_colors(uint8_t* color)
 	for (uint8_t x = 1; x < IM_LENGTH_PX-1; ++x) {
 		for (uint8_t y = 1; y < IM_HEIGHT_PX-1; ++y) {
 			pos = position(x,y);
-			if(img_buffer[pos] == STRONG_PIXEL) {
-				switch(sobel_angle_state[pos]) {
+			if (img_buffer[pos] == STRONG_PIXEL) {
+				switch (sobel_angle_state[pos]) {
 				case first_octant:
 					dx = 1; dy = 0;
 					break;
@@ -359,40 +363,39 @@ static void set_strong_pixel_colors(uint8_t* color)
  */
 static void local_max_supression(float max)
 {
-	float i= 0;
-	float j= 0;
+	float mag_octant = 0;
+	float mag_octant_opposed = 0;
 
 	const int8_t dx = 1;
 	const int8_t dy = IM_LENGTH_PX;
 
 	uint16_t pos = 0;
-	for(uint8_t x = XY_OFFSET_3x3; x < IM_LENGTH_PX-XY_OFFSET_3x3; ++x){
-		for(uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y){
+	for (uint8_t x = XY_OFFSET_3x3; x < IM_LENGTH_PX-XY_OFFSET_3x3; ++x){
+		for (uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y){
 			pos = position(x,y);
-			switch(sobel_angle_state[pos]){
+			switch (sobel_angle_state[pos]){
 				case first_octant:
 				case fifth_octant:
-					i = I_mag[pos - dx];
-					j = I_mag[pos + dx];
+					mag_octant = I_mag[pos - dx];
+					mag_octant_opposed = I_mag[pos + dx];
 					break;
 				case second_octant:
 				case sixth_octant:
-					i = I_mag[pos - dy + dx];
-					j = I_mag[pos + dy - dx];
+					mag_octant = I_mag[pos - dy + dx];
+					mag_octant_opposed = I_mag[pos + dy - dx];
 					break;
 				case third_octant:
 				case seventh_octant:
-					i = I_mag[pos - dy];
-					j = I_mag[pos + dy];
+					mag_octant = I_mag[pos - dy];
+					mag_octant_opposed = I_mag[pos + dy];
 				break;
 				case fourth_octant:
 				case eighth_octant:
-					i = I_mag[pos - dy - dx];
-					j = I_mag[pos + dy + dx];
+					mag_octant = I_mag[pos - dy - dx];
+					mag_octant_opposed = I_mag[pos + dy + dx];
 				break;
 			}
-			// multiplied by constant >1 for thicker lines
-			if((I_mag[pos] >= i) && (I_mag[pos] >= j)) {
+			if ((I_mag[pos] >= mag_octant) && (I_mag[pos] >= mag_octant_opposed)) {
 				img_buffer[pos] = I_mag[pos]/max*STRONG_PIXEL;
 			} else
 				img_buffer[pos] = BG_PIXEL;
@@ -440,8 +443,8 @@ static void edge_track_hyst(void)
 	for (uint8_t x = 1; x < IM_LENGTH_PX-1; x++) {
 		for (uint8_t y = 1; y < IM_HEIGHT_PX-1; y++) {
 			pos = position(x,y);
-			if(img_temp_buffer[pos] == WEAK_PIXEL){
-				if(img_temp_buffer[pos-dy-dx] == STRONG_PIXEL
+			if (img_temp_buffer[pos] == WEAK_PIXEL){
+				if (img_temp_buffer[pos-dy-dx] == STRONG_PIXEL
 				    || img_temp_buffer[pos-dy] == STRONG_PIXEL
 				    || img_temp_buffer[pos-dy+dx] == STRONG_PIXEL
 				    || img_temp_buffer[pos-dx] == STRONG_PIXEL
@@ -453,7 +456,7 @@ static void edge_track_hyst(void)
 					img_buffer[pos] = STRONG_PIXEL;
 				else
 					img_buffer[pos] = BG_PIXEL;
-			} else if(img_temp_buffer[pos] == STRONG_PIXEL) {
+			} else if (img_temp_buffer[pos] == STRONG_PIXEL) {
 				img_buffer[pos] = STRONG_PIXEL;
 			} else {
 				img_buffer[pos] = BG_PIXEL;
@@ -528,8 +531,8 @@ static void remove_unique_px(void)
 	for (uint8_t x = 1; x < IM_LENGTH_PX-1; x++) {
 		for (uint8_t y = 1; y < IM_HEIGHT_PX-1; y++) {
 			pos = position(x,y);
-			if(img_buffer[pos]) {
-				if(   !img_buffer[pos + dx]      && !img_buffer[pos - dx]
+			if (img_buffer[pos]) {
+				if (  !img_buffer[pos + dx]      && !img_buffer[pos - dx]
 				   && !img_buffer[pos + dy]      && !img_buffer[pos - dy]
 				   && !img_buffer[pos - dy - dx] && !img_buffer[pos - dy + dx]
 				   && !img_buffer[pos + dy - dx] && !img_buffer[pos + dy + dx])
@@ -628,7 +631,7 @@ static THD_FUNCTION(thd_capture_image, arg) {
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
 	chThdSleepMilliseconds(1000);
-	while(1){
+	while (1){
 		chBSemWait(&sem_capture_image);
 		dcmi_capture_start();
 		wait_image_ready();
@@ -644,7 +647,7 @@ static THD_FUNCTION(thd_process_image, arg) {
 	chRegSetThreadName(__FUNCTION__);
 	(void)arg;
 
-	while(1){
+	while (1){
 		chBSemWait(&sem_image_captured);
 		img_buffer = dcmi_get_last_image_ptr();
 

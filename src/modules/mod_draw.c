@@ -136,7 +136,7 @@ static THD_FUNCTION(thd_draw, arg)
 	uint8_t* color = data_get_color();
 	uint8_t prev_color = white;
 
-	for(i = 0; i < length && !chThdShouldTerminateX(); ++i) {
+	for (i = 0; i < length && !chThdShouldTerminateX(); ++i) {
 //		chThdSleepMilliseconds(500); // more precise but slower
 		if (color[i] != prev_color) {
 			is_waiting = true;
@@ -200,7 +200,7 @@ void draw_stop_thd(void)
 
 void draw_pause_thd(void)
 {
-	if(is_drawing)
+	if (is_drawing)
 		is_paused = true;
 }
 

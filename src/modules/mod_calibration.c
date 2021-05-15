@@ -137,9 +137,9 @@ static int16_t get_speed_p(int16_t goal_distance, int16_t init_distance,
 	speed = KP * error;
 
 	// define lower and upped bounds for the speed returned
-	if(speed > CALIBRATION_SPEED)
+	if (speed > CALIBRATION_SPEED)
 		speed = CALIBRATION_SPEED;
-	if(speed < -CALIBRATION_SPEED)
+	if (speed < -CALIBRATION_SPEED)
 		speed = -CALIBRATION_SPEED;
 
 	return (int16_t)speed;
@@ -163,9 +163,9 @@ static int16_t move_home(bool* reached_home)
 	speed = KP/MM_TO_STEP * error;
 
 	// define lower and upped bounds for the speed returned
-	if(speed > CALIBRATION_SPEED)
+	if (speed > CALIBRATION_SPEED)
 		speed = CALIBRATION_SPEED;
-	if(speed < -CALIBRATION_SPEED)
+	if (speed < -CALIBRATION_SPEED)
 		speed = -CALIBRATION_SPEED;
 	return (int16_t)speed;
 }
@@ -228,7 +228,7 @@ static THD_FUNCTION(thd_calibrate, arg)
 	com_request_color(black);
 	chBSemWait(&sem_changed_color);
 	is_waiting_color = false;
-	if(chThdShouldTerminateX()) {
+	if (chThdShouldTerminateX()) {
 		chThdExit(0);
 	}
 
@@ -236,12 +236,12 @@ static THD_FUNCTION(thd_calibrate, arg)
 	com_request_color(white);
 	chBSemWait(&sem_changed_color);
 	is_waiting_color = false;
-	if(chThdShouldTerminateX()) {
+	if (chThdShouldTerminateX()) {
 		chThdExit(0);
 	}
 
 	draw_move(X_DEFAULT+CALIBRATION_SQ_PX, Y_DEFAULT);
-	if(chThdShouldTerminateX()) {
+	if (chThdShouldTerminateX()) {
 		chThdExit(0);
 	}
 
@@ -250,14 +250,14 @@ static THD_FUNCTION(thd_calibrate, arg)
 	com_request_color(black);
 	chBSemWait(&sem_changed_color);
 	is_waiting_color = false;
-	if(chThdShouldTerminateX()) {
+	if (chThdShouldTerminateX()) {
 		chThdExit(0);
 	}
 	is_waiting_color = true;
 	com_request_color(white);
 	chBSemWait(&sem_changed_color);
 	is_waiting_color = false;
-	if(chThdShouldTerminateX()) {
+	if (chThdShouldTerminateX()) {
 		chThdExit(0);
 	}
 	draw_move(X_DEFAULT, Y_DEFAULT);

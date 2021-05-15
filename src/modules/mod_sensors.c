@@ -107,7 +107,7 @@ static THD_FUNCTION(thd_tof_kalman, arg) {
 	chRegSetThreadName(__FUNCTION__);
 	(void)arg;
 
-	while(1) {
+	while (1) {
 		dist_mm_kalman = kalman1d(VL53L0X_get_dist_mm());
 //		chprintf((BaseSequentialStream *)&SDU1, "dist %d", dist_mm_kalman);
 		chThdSleepMilliseconds(TOF_PERIOD);
@@ -154,7 +154,7 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 
 	while (state != 4 && cal_get_state() == true) {
 		current_dist = dist_mm_kalman;
-		if(state == 0) {
+		if (state == 0) {
 			// turn off the leds
 			palSetPad(GPIOD, GPIOD_LED1);
 			palSetPad(GPIOD, GPIOD_LED3);
@@ -162,7 +162,7 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 			palSetPad(GPIOD, GPIOD_LED7);
 		}
 
-		if(state == 0 && distance_min <= current_dist && distance_max >= current_dist) {
+		if (state == 0 && distance_min <= current_dist && distance_max >= current_dist) {
 			state = 1;
 			prev_dist = current_dist;
 			palClearPad(GPIOD, GPIOD_LED1);
@@ -172,7 +172,7 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 			state = 0;
 		}
 
-		if(state == 1 && abs((int16_t)current_dist - (int16_t)prev_dist)
+		if (state == 1 && abs((int16_t)current_dist - (int16_t)prev_dist)
 		                                          <= distance_threshold) {
 			state = 2;
 			prev_dist = current_dist;
@@ -183,7 +183,7 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 			state = 0;
 		}
 
-		if(state == 2 && abs((int16_t)current_dist - (int16_t)prev_dist)
+		if (state == 2 && abs((int16_t)current_dist - (int16_t)prev_dist)
 		                                          <= distance_threshold) {
 			state = 3;
 			prev_dist = current_dist;
@@ -194,7 +194,7 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 			state = 0;
 		}
 
-		if(state == 3 && abs((int16_t)current_dist - (int16_t)prev_dist)
+		if (state == 3 && abs((int16_t)current_dist - (int16_t)prev_dist)
 		                                          <= distance_threshold) {
 			state = 4;
 			prev_dist = current_dist;
@@ -207,7 +207,7 @@ uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
 	}
 
 	// blink leds on success
-	for(uint8_t i = 0; i < BLINK_MAX_COUNT; ++ i) {
+	for (uint8_t i = 0; i < BLINK_MAX_COUNT; ++ i) {
 
 		palClearPad(GPIOD, GPIOD_LED1);
 		palClearPad(GPIOD, GPIOD_LED3);

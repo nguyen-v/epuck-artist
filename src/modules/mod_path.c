@@ -86,6 +86,7 @@
  * this parameter is important because the robot needs more than two points
  * to draw a straight line (mechanical constraint)
  */
+
 #define MAX_PIXEL_DIST     3
 #define KEEP               1
 #define REMOVE             0
@@ -137,104 +138,104 @@ static void path_tracing(uint8_t* img_buffer, uint8_t* color,
 	uint16_t y_temp = 1;
 
 	uint16_t pos = 0;
-	for(uint8_t x = 1; x<IM_LENGTH_PX-1; ++x) {
-		for(uint8_t y=1; y< IM_HEIGHT_PX-1; ++y) {
+	for (uint8_t x = 1; x<IM_LENGTH_PX-1; ++x) {
+		for (uint8_t y=1; y< IM_HEIGHT_PX-1; ++y) {
 			pos = position(x,y);
 			x_temp = x;
 			y_temp = y;
 			// Start from a pixel and move until extremity is found
 			extremity_found = false;
-			if(img_buffer[pos] == max) {
+			if (img_buffer[pos] == max) {
 
 				img_buffer[pos] = visited;
 				bool has_converged = false;
-				while(!extremity_found) {
+				while (!extremity_found) {
 					// First check pixels with max intensity (not visited yet)
 					// right
-					if(img_buffer[pos+dx]==max) {
+					if (img_buffer[pos+dx]==max) {
 						pos += dx;
 						++x_temp;
 					}
 					// left
-					else if(img_buffer[pos-dx]==max) {
+					else if (img_buffer[pos-dx]==max) {
 						pos -= dx;
 						--x_temp;
 					}
 					// bottom
-					else if(img_buffer[pos+dy]==max) {
+					else if (img_buffer[pos+dy]==max) {
 						pos += dy;
 						++y_temp;
 					}
 					// top
-					else if(img_buffer[pos-dy]==max) {
+					else if (img_buffer[pos-dy]==max) {
 						pos -= dy;
 						--y_temp;
 					}
 					// bottom right
-					else if(img_buffer[pos+dx+dy]==max) {
+					else if (img_buffer[pos+dx+dy]==max) {
 						pos += (dx+dy);
 						++x_temp; ++y_temp;
 					}
 					// bottom left
-					else if(img_buffer[pos-dx+dy]==max) {
+					else if (img_buffer[pos-dx+dy]==max) {
 						pos -= (dx-dy);
 						--x_temp; ++y_temp;
 					}
 					// top right
-					else if(img_buffer[pos+dx-dy]==max) {
+					else if (img_buffer[pos+dx-dy]==max) {
 						pos += (dx-dy);
 						++x_temp; --y_temp;
 					}
 					// top left
-					else if(img_buffer[pos-dx-dy]==max) {
+					else if (img_buffer[pos-dx-dy]==max) {
 						pos -= (dx+dy);
 						--x_temp; --y_temp;
 					}
 					// Here we allow the robot to come back ONCE on a pixel that
 					// has been marked as "rewind"
-					else if(!has_converged && img_buffer[pos+dx]==rewind) {
+					else if (!has_converged && img_buffer[pos+dx]==rewind) {
 						pos += dx;
 						++x_temp;
 						has_converged = true;
 					}
 					// left
-					else if(!has_converged && img_buffer[pos-dx]==rewind) {
+					else if (!has_converged && img_buffer[pos-dx]==rewind) {
 						pos -= dx;
 						--x_temp;
 						has_converged = true;
 					}
 					// bottom
-					else if(!has_converged && img_buffer[pos+dy]==rewind) {
+					else if (!has_converged && img_buffer[pos+dy]==rewind) {
 						pos += dy;
 						++y_temp;
 						has_converged = true;
 					}
 					// top
-					else if(!has_converged && img_buffer[pos-dy]==rewind) {
+					else if (!has_converged && img_buffer[pos-dy]==rewind) {
 						pos -= dy;
 						--y_temp;
 						has_converged = true;
 					}
 					// bottom right
-					else if(!has_converged && img_buffer[pos+dx+dy]==rewind) {
+					else if (!has_converged && img_buffer[pos+dx+dy]==rewind) {
 						pos += (dx+dy);
 						++x_temp; ++y_temp;
 						has_converged = true;
 					}
 					// bottom left
-					else if(!has_converged && img_buffer[pos-dx+dy]==rewind) {
+					else if (!has_converged && img_buffer[pos-dx+dy]==rewind) {
 						pos -= (dx-dy);
 						--x_temp; ++y_temp;
 						has_converged = true;
 					}
 					// top right
-					else if(!has_converged && img_buffer[pos+dx-dy]==rewind) {
+					else if (!has_converged && img_buffer[pos+dx-dy]==rewind) {
 						pos += (dx-dy);
 						++x_temp; --y_temp;
 						has_converged = true;
 					}
 					// top left
-					else if(!has_converged && img_buffer[pos-dx-dy]==rewind) {
+					else if (!has_converged && img_buffer[pos-dx-dy]==rewind) {
 						pos -= (dx+dy);
 						--x_temp; --y_temp;
 						has_converged = true;
@@ -263,47 +264,47 @@ static void path_tracing(uint8_t* img_buffer, uint8_t* color,
 				img_buffer[pos] = begin;
 
 				extremity_found = false;
-				while(!extremity_found) {
+				while (!extremity_found) {
 					status = 0;
 					// Check visited pixels first (to avoid rewinding the wrong pixels)
 
 					// right
-					if(img_buffer[pos+dx]==visited) {
+					if (img_buffer[pos+dx]==visited) {
 						pos += dx;
 						++x_temp;
 					}
 					// left
-					else if(img_buffer[pos-dx]==visited) {
+					else if (img_buffer[pos-dx]==visited) {
 						pos -= dx;
 						--x_temp;
 					}
 					// bottom
-					else if(img_buffer[pos+dy]==visited) {
+					else if (img_buffer[pos+dy]==visited) {
 						pos += dy;
 						++y_temp;
 					}
 					// top
-					else if(img_buffer[pos-dy]==visited) {
+					else if (img_buffer[pos-dy]==visited) {
 						pos -= dy;
 						--y_temp;
 					}
 					// bottom right
-					else if(img_buffer[pos+dx+dy]==visited) {
+					else if (img_buffer[pos+dx+dy]==visited) {
 						pos += (dx+dy);
 						++x_temp; ++y_temp;
 					}
 					// bottom left
-					else if(img_buffer[pos-dx+dy]==visited) {
+					else if (img_buffer[pos-dx+dy]==visited) {
 						pos -= (dx-dy);
 						--x_temp; ++y_temp;
 					}
 					// top right
-					else if(img_buffer[pos+dx-dy]==visited) {
+					else if (img_buffer[pos+dx-dy]==visited) {
 						pos += (dx-dy);
 						++x_temp; --y_temp;
 					}
 					// top left
-					else if(img_buffer[pos-dx-dy]==visited) {
+					else if (img_buffer[pos-dx-dy]==visited) {
 						pos -= (dx+dy);
 						--x_temp; --y_temp;
 					}
@@ -315,49 +316,49 @@ static void path_tracing(uint8_t* img_buffer, uint8_t* color,
 					  *       *size_contours-1 != edges[edge_index-1].index handles this
 					  */
 
-					else if(img_buffer[pos+dx]==max || (img_buffer[pos+dx]==begin
+					else if (img_buffer[pos+dx]==max || (img_buffer[pos+dx]==begin
 					         && *size_contours-1 != edges[edge_index-1].index)) {
 						pos += dx;
 						++x_temp;
 					}
 					// left
-					else if(img_buffer[pos-dx]==max || (img_buffer[pos-dx]==begin
+					else if (img_buffer[pos-dx]==max || (img_buffer[pos-dx]==begin
 					         && *size_contours-1 != edges[edge_index-1].index)) {
 						pos -= dx;
 						--x_temp;
 					}
 					// bottom
-					else if(img_buffer[pos+dy]==max || (img_buffer[pos+dy]==begin
+					else if (img_buffer[pos+dy]==max || (img_buffer[pos+dy]==begin
 					         && *size_contours-1 != edges[edge_index-1].index)) {
 						pos += dy;
 						++y_temp;
 					}
 					// top
-					else if(img_buffer[pos-dy]==max || (img_buffer[pos-dy]==begin
+					else if (img_buffer[pos-dy]==max || (img_buffer[pos-dy]==begin
 					         && *size_contours-1 != edges[edge_index-1].index)) {
 						pos -= dy;
 						--y_temp;
 					}
 					// bottom right
-					else if(img_buffer[pos+dx+dy]==max || (img_buffer[pos+dx+dy]==begin
+					else if (img_buffer[pos+dx+dy]==max || (img_buffer[pos+dx+dy]==begin
 					         && *size_contours-1 != edges[edge_index-1].index)) {
 						pos += (dx+dy);
 						++x_temp; ++y_temp;
 					}
 					// bottom left
-					else if(img_buffer[pos-dx+dy]==max || (img_buffer[pos-dx+dy]==begin
+					else if (img_buffer[pos-dx+dy]==max || (img_buffer[pos-dx+dy]==begin
 					         && *size_contours-1 != edges[edge_index-1].index)) {
 						pos -= (dx-dy);
 						--x_temp; ++y_temp;
 					}
 					// top right
-					else if(img_buffer[pos+dx-dy]==max || (img_buffer[pos+dx-dy]==begin
+					else if (img_buffer[pos+dx-dy]==max || (img_buffer[pos+dx-dy]==begin
 					         && *size_contours-1 != edges[edge_index-1].index)) {
 						pos += (dx-dy);
 						++x_temp; --y_temp;
 					}
 					// top left
-					else if(img_buffer[pos-dx-dy]==max || (img_buffer[pos-dx-dy]==begin
+					else if (img_buffer[pos-dx-dy]==max || (img_buffer[pos-dx-dy]==begin
 					         && *size_contours-1 != edges[edge_index-1].index)) {
 						pos -= (dx+dy);
 						--x_temp; --y_temp;
@@ -367,14 +368,14 @@ static void path_tracing(uint8_t* img_buffer, uint8_t* color,
 						edges[edge_index].pos.x = x_temp;
 						edges[edge_index].pos.y = y_temp;
 						// isolated points must be saved as 2 different edges
-						if(edges[edge_index-1].index == *size_contours)
+						if (edges[edge_index-1].index == *size_contours)
 							++(*size_contours);
 						edges[edge_index].index = *size_contours;
 						contours[*size_contours].is_extremity = true;
 						++edge_index;
 					}
 					img_buffer[pos] = rewind;
-					if(!extremity_found) {
+					if (!extremity_found) {
 						++(*size_contours);
 						contours[*size_contours].is_extremity = false;
 					}
@@ -408,10 +409,10 @@ static void set_contours_color(uint8_t* color, uint16_t size_edges)
 		uint16_t *green_count = calloc(size_edges/2, sizeof(uint16_t*));
 		uint16_t *blue_count = calloc(size_edges/2, sizeof(uint16_t*));
 		for (uint16_t i = 0; i < size_edges; i+=2) {
-			if(edges[i+1].index > edges[i].index) {
-				for(uint16_t j = edges[i].index; j <= edges[i+1].index; ++j){
+			if (edges[i+1].index > edges[i].index) {
+				for (uint16_t j = edges[i].index; j <= edges[i+1].index; ++j){
 
-					switch(color[position(contours[j].pos.x, contours[j].pos.y)]) {
+					switch (color[position(contours[j].pos.x, contours[j].pos.y)]) {
 						case black:
 							++black_count[m];
 							break;
@@ -428,11 +429,11 @@ static void set_contours_color(uint8_t* color, uint16_t size_edges)
 
 					++k;
 				}
-			} else if(edges[i+1].index < edges[i].index) {
+			} else if (edges[i+1].index < edges[i].index) {
 				//int16 because j is decremented to -1 for an index of 0
-				for(int16_t j = edges[i].index; j >= edges[i+1].index; --j){
+				for (int16_t j = edges[i].index; j >= edges[i+1].index; --j){
 
-					switch(color[position(contours[j].pos.x, contours[j].pos.y)]) {
+					switch (color[position(contours[j].pos.x, contours[j].pos.y)]) {
 						case black:
 							++black_count[m];
 							break;
@@ -456,23 +457,23 @@ static void set_contours_color(uint8_t* color, uint16_t size_edges)
 		k = 0;
 		for (uint16_t i = 0; i < size_edges; i+=2) {
 			uint8_t final_color = white;
-			if(red_count[m] > fmax(fmax(green_count[m],blue_count[m]),black_count[m])){
+			if (red_count[m] > fmax(fmax(green_count[m],blue_count[m]),black_count[m])){
 				final_color = red;
-			} else if(green_count[m] > fmax(fmax(blue_count[m],red_count[m]),
+			} else if (green_count[m] > fmax(fmax(blue_count[m],red_count[m]),
 			                                 black_count[m])){
 				final_color = green;
-			} else if(blue_count[m] > fmax(fmax(black_count[m],red_count[m]),
+			} else if (blue_count[m] > fmax(fmax(black_count[m],red_count[m]),
 			                                green_count[m])){
 				final_color = blue;
 			}	else final_color = black;
 
-			if(edges[i+1].index > edges[i].index) {
-				for(uint16_t j = edges[i].index; j <= edges[i+1].index; ++j){
+			if (edges[i+1].index > edges[i].index) {
+				for (uint16_t j = edges[i].index; j <= edges[i+1].index; ++j){
 					contours[k].color = final_color;
 					++k;
 				}
-			} else if(edges[i+1].index < edges[i].index) {
-				for(int16_t j = edges[i].index; j >= edges[i+1].index; --j){
+			} else if (edges[i+1].index < edges[i].index) {
+				for (int16_t j = edges[i].index; j >= edges[i+1].index; --j){
 					contours[k].color = final_color;
 					++k;
 				}
@@ -525,39 +526,39 @@ static void contour_optimization(edge_track *contour, uint16_t start, uint16_t e
 		uint16_t index = start;
 		float dmax = 0;
 
-		for(uint16_t i = index+1; i < end; ++i){
-			if(opt_contour[i]){
+		for (uint16_t i = index+1; i < end; ++i){
+			if (opt_contour[i]){
 				distance = perpendicular_distance(contour[start].pos, contour[end].pos,
 				                                  contour[i].pos);
-				if(distance > dmax) {
+				if (distance > dmax) {
 					index = i;
 					dmax = distance;
 				}
 			}
 		}
 
-		if(dmax >= MAX_PERP_DIST){
+		if (dmax >= MAX_PERP_DIST){
 			start_depth[stack_count] = start;
 			end_depth[stack_count] = index;
 			++stack_count;
 			start_depth[stack_count] = index;
 			end_depth[stack_count] = end;
 			++stack_count;
-		} else if(dmax == 0) {
+		} else if (dmax == 0) {
 			uint16_t k = 0;
-			for(uint16_t i = start + 1; i < end;++i){
+			for (uint16_t i = start + 1; i < end;++i){
 				opt_contour[i] = REMOVE;
 			}
-			while(k*MAX_PIXEL_DIST + start + 1 < end ){
+			while (k*MAX_PIXEL_DIST + start + 1 < end ){
 				opt_contour[start+k*MAX_PIXEL_DIST] = KEEP;
 				++k;
 				}
-			if(!((k-1)*MAX_PIXEL_DIST+start == end)){
+			if (!((k-1)*MAX_PIXEL_DIST+start == end)){
 				opt_contour[end] = KEEP;
 				++k;
 				}
 		} else {
-			for(uint16_t i = start + 1; i < end;++i){
+			for (uint16_t i = start + 1; i < end;++i){
 				opt_contour[i] = REMOVE;
 			}
 		}
@@ -576,19 +577,19 @@ static uint16_t path_optimization(edge_track* contours, edge_pos* edges,
 
 	uint16_t opt_contours_size = 0;
 	uint16_t contours_size = 0;
-	for(uint8_t i = 0; i < (size_edges)/2; ++i){
+	for (uint8_t i = 0; i < (size_edges)/2; ++i){
 		uint16_t start_index = edges[i*2].index;
 		uint16_t end_index = edges[i*2+1].index;
 		uint8_t loop = 0;
 
-		if(end_index - start_index == 1){
+		if (end_index - start_index == 1){
 			contours[opt_contours_size] = contours[contours_size];
 			contours[opt_contours_size+1] = contours[contours_size+1];
 			opt_contours_size += 2;
 			contours_size += 2;
 		} else {
 			uint16_t length = end_index - start_index + 1;
-			if(contours[start_index].pos.x == contours[end_index].pos.x
+			if (contours[start_index].pos.x == contours[end_index].pos.x
 			   && contours[start_index].pos.y == contours[end_index].pos.y){
 				--length;
 				++loop;
@@ -597,25 +598,25 @@ static uint16_t path_optimization(edge_track* contours, edge_pos* edges,
 			new_contour = malloc(length*sizeof(struct edge_track));
 			contours_to_remove = malloc(length*sizeof(uint8_t));
 
-			for(uint8_t m = 0; m < length; ++m){
+			for (uint8_t m = 0; m < length; ++m){
 				contours_to_remove[m] = KEEP;
 			}
 
-			for(uint16_t n = 0; n < length; ++n){
+			for (uint16_t n = 0; n < length; ++n){
 				new_contour[n] = contours[contours_size + n];
 			}
 
 			contours_size += length;
 			contour_optimization(new_contour, 0, length-1, contours_to_remove);
 
-			for(uint8_t j = 0; j < length; ++j){
-				if(contours_to_remove[j] == KEEP){
+			for (uint8_t j = 0; j < length; ++j){
+				if (contours_to_remove[j] == KEEP){
 				contours[opt_contours_size] = new_contour[j];
 				++opt_contours_size;
 				}
 			}
 
-			if(loop){
+			if (loop){
 				contours[opt_contours_size] = contours[contours_size];
 				++opt_contours_size;
 				++contours_size;
@@ -638,8 +639,8 @@ static uint16_t path_optimization(edge_track* contours, edge_pos* edges,
 static void reorder_edges_index(uint16_t opt_contours_size, uint16_t size_edges)
 {
 	uint16_t k = 0;
-	for(uint16_t i = 0; i < opt_contours_size; ++i){
-		if(contours[i].is_extremity == true){
+	for (uint16_t i = 0; i < opt_contours_size; ++i){
+		if (contours[i].is_extremity == true){
 			edges[k].index = i;
 			++k;
 		}
@@ -663,15 +664,15 @@ static void nearest_neighbour(uint16_t size_edges){
 	bool first_pos = true;
 	cartesian_coord init_pos;
 	init_pos.x = INIT_ROBPOS_PX; init_pos.y = INIT_ROBPOS_PY;
-	for(uint16_t start_index = 0; start_index < size_edges-1; start_index+=2) {
+	for (uint16_t start_index = 0; start_index < size_edges-1; start_index+=2) {
 		min_distance = IM_HEIGHT_PX+IM_LENGTH_PX;
-		for(uint16_t i = start_index; i < size_edges; ++i) {
+		for (uint16_t i = start_index; i < size_edges; ++i) {
 			// search for index with smallest distance
 			if (first_pos)
 				distance = two_point_distance(edges[i].pos, init_pos);
 			else
 				distance = two_point_distance(edges[i].pos, edges[start_index-1].pos);
-			if(distance < min_distance) {
+			if (distance < min_distance) {
 				min_distance = distance;
 				min_index = i;
 			}
@@ -724,8 +725,8 @@ static void create_final_path(uint8_t* color, uint16_t size_edges,
 	color[0] = white;
 	uint16_t k = 1;
 	for (uint16_t i = 0; i < size_edges; i+=2) {
-		if(edges[i+1].index > edges[i].index) {
-			for(uint16_t j = edges[i].index; j <= edges[i+1].index; ++j){
+		if (edges[i+1].index > edges[i].index) {
+			for (uint16_t j = edges[i].index; j <= edges[i+1].index; ++j){
 				final_path[k].x = contours[j].pos.x;
 				final_path[k].y = contours[j].pos.y;
 				if (j == edges[i].index)
@@ -734,9 +735,9 @@ static void create_final_path(uint8_t* color, uint16_t size_edges,
 					color[k] = contours[j].color;
 				++k;
 			}
-		} else if(edges[i+1].index < edges[i].index) {
+		} else if (edges[i+1].index < edges[i].index) {
 			// int16 because j is decremented to -1 for an index of 0
-			for(int16_t j = edges[i].index; j >= edges[i+1].index; --j){
+			for (int16_t j = edges[i].index; j >= edges[i+1].index; --j){
 				final_path[k].x = contours[j].pos.x;
 				final_path[k].y = contours[j].pos.y;
 				if (j == edges[i].index)
@@ -807,7 +808,7 @@ void path_planning(void)
 		}
 	}
 
-	if(nb_pixels == 0)
+	if (nb_pixels == 0)
 		return;
 
 	/**

@@ -50,24 +50,24 @@ uint8_t com_receive_command(BaseSequentialStream* in)
 	volatile uint8_t c;
 	uint8_t state = 0;
 
-	while(state != 3) {
+	while (state != 3) {
 		c = chSequentialStreamGet(in);
 
-		switch(state) {
+		switch (state) {
 			case 0:
-				if(c == 'C')
+				if (c == 'C')
 					state = 1;
 				else
 					state = 0;
 			case 1:
-				if(c == 'M')
+				if (c == 'M')
 					state = 2;
-				else if(c == 'C')
+				else if (c == 'C')
 					state = 1;
 				else
 					state = 0;
 			case 2:
-				if(c == 'D')
+				if (c == 'D')
 					state = 3;
 				else if (c == 'C')
 					state = 1;
@@ -83,24 +83,24 @@ uint8_t com_receive_length(BaseSequentialStream* in)
 	volatile uint8_t c;
 	uint8_t state = 0;
 
-	while(state != 3) {
+	while (state != 3) {
 		c = chSequentialStreamGet(in);
 
-		switch(state) {
+		switch (state) {
 			case 0:
-				if(c == 'L')
+				if (c == 'L')
 					state = 1;
 				else
 					state = 0;
 			case 1:
-				if(c == 'E')
+				if (c == 'E')
 					state = 2;
-				else if(c == 'L')
+				else if (c == 'L')
 					state = 1;
 				else
 					state = 0;
 			case 2:
-				if(c == 'N')
+				if (c == 'N')
 					state = 3;
 				else if (c == 'L')
 					state = 1;
@@ -118,33 +118,33 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 	volatile uint16_t length = 0;
 	uint8_t state = 0;
 
-	while(state != 4) {
+	while (state != 4) {
 		c1 = chSequentialStreamGet(in);
 
-		switch(state) {
+		switch (state) {
 			case 0:
-				if(c1 == 'M')
+				if (c1 == 'M')
 					state = 1;
 				else
 					state = 0;
 			case 1:
-				if(c1 == 'O')
+				if (c1 == 'O')
 					state = 2;
-				else if(c1 == 'M')
+				else if (c1 == 'M')
 					state = 1;
 				else
 					state = 0;
 			case 2:
-				if(c1 == 'V')
+				if (c1 == 'V')
 					state = 3;
-				else if(c1 == 'M')
+				else if (c1 == 'M')
 					state = 1;
 				else
 					state = 0;
 			case 3:
-				if(c1 == 'E')
+				if (c1 == 'E')
 					state = 4;
-				else if(c1 == 'M')
+				else if (c1 == 'M')
 					state = 1;
 				else
 					state = 0;
@@ -173,7 +173,7 @@ uint16_t com_receive_data(BaseSequentialStream* in)
 	}
 
 	//	fill the position and color buffers
-	for(uint16_t i = 0; i < length; ++i) {
+	for (uint16_t i = 0; i < length; ++i) {
 		c1 = chSequentialStreamGet(in);
 		color[i] = c1;
 
@@ -198,7 +198,7 @@ void com_send_data(BaseSequentialStream* out, uint8_t* data, uint16_t size,
 	chSequentialStreamWrite(out, (uint8_t*)"START\r", 6);
 
 	// send message type
-	switch(msg_type) {
+	switch (msg_type) {
 		case MSG_COLOR:
 			chprintf(out, "color");
 			break;
@@ -253,15 +253,15 @@ void com_send_data(BaseSequentialStream* out, uint8_t* data, uint16_t size,
 		cartesian_coord* path = data_get_pos();
 		uint8_t* color = data_get_color();
 
-		for(uint16_t i = 0; i < size; ++i) {
+		for (uint16_t i = 0; i < size; ++i) {
 			chSequentialStreamWrite((BaseSequentialStream *)&SD3,
 			                       (uint8_t*)&(path[i].x), sizeof(uint8_t));
 		}
-		for(uint16_t i = 0; i < size; ++i) {
+		for (uint16_t i = 0; i < size; ++i) {
 			chSequentialStreamWrite((BaseSequentialStream *)&SD3,
 			                        (uint8_t*)&(path[i].y), sizeof(uint8_t));
 		}
-		for(uint16_t i = 0; i < size; ++i) {
+		for (uint16_t i = 0; i < size; ++i) {
 			chSequentialStreamWrite((BaseSequentialStream *)&SD3,
 			                        (uint8_t*)&(color[i]), sizeof(uint8_t));
 		}
@@ -271,7 +271,7 @@ void com_send_data(BaseSequentialStream* out, uint8_t* data, uint16_t size,
 void com_request_color(uint8_t col)
 {
 	uint8_t color = white;
-	switch(col) {
+	switch (col) {
 		case white:
 			color = 'W';
 			break;

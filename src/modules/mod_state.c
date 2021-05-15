@@ -66,7 +66,7 @@ static thread_t* ptr_process_cmd;
  */
 static void process_command(uint8_t cmd)
 {
-	switch(cmd) {
+	switch (cmd) {
 		case CMD_RESET:
 			draw_stop_thd();
 			cal_stop_thd();
@@ -124,7 +124,7 @@ static THD_FUNCTION(thd_process_cmd, arg)
 	chRegSetThreadName(__FUNCTION__);
 	(void)arg;
 
-	while(1) {
+	while (1) {
 		uint8_t cmd = com_receive_command((BaseSequentialStream *)&SD3);
 		process_command(cmd);
 		chThdSleepMilliseconds(CMD_PERIOD);

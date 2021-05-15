@@ -6,7 +6,6 @@
 // C standard header files
 
 #include <stdint.h>
-//#include <stdbool.h>
 #include <stdlib.h>
 
 // Module headers
@@ -46,7 +45,7 @@ uint8_t* data_get_color(void)
 
 void data_set_length(uint16_t length)
 {
-	if(length > MAX_LENGTH) {
+	if (length > MAX_LENGTH) {
 		data_length = MAX_LENGTH;
 	} else {
 		data_length = length;
@@ -94,12 +93,12 @@ cartesian_coord* data_alloc_xy(uint16_t length)
 {
 	uint16_t temp_length = length;
 
-	if(length > MAX_LENGTH) {
+	if (length > MAX_LENGTH) {
 		temp_length = MAX_LENGTH;
 	}
 
 	pos = (cartesian_coord*)malloc(temp_length*sizeof(cartesian_coord));
-	if(pos == NULL) {
+	if (pos == NULL) {
 		return pos;
 	}
 
@@ -109,13 +108,13 @@ cartesian_coord* data_alloc_xy(uint16_t length)
 uint8_t* data_alloc_color(uint16_t length)
 {
 	uint16_t temp_length = length;
-	if(length > MAX_LENGTH) {
+	if (length > MAX_LENGTH) {
 		temp_length = MAX_LENGTH;
 	}
 
 	color = (uint8_t*)malloc(temp_length*sizeof(uint8_t));
 
-	if(color == NULL) {
+	if (color == NULL) {
 		return color;
 	}
 
@@ -125,13 +124,13 @@ uint8_t* data_alloc_color(uint16_t length)
 uint8_t* data_realloc_color(uint16_t length)
 {
 	uint16_t temp_length = length;
-	if(length > MAX_LENGTH) {
+	if (length > MAX_LENGTH) {
 		temp_length = MAX_LENGTH;
 	}
 
 	color = (uint8_t*)realloc(color, temp_length*sizeof(uint8_t));
 
-	if(color == NULL) {
+	if (color == NULL) {
 		return color;
 	}
 
