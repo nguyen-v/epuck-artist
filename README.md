@@ -7,9 +7,9 @@ An edge processing, 4-color equipped wall plotter.
 Embedded Systems and Robotics semester project at [EPFL](https://www.epfl.ch/) using the e-puck 2 robot from [GCtronic](https://www.gctronic.com/).
 
 ## Features
-- Reproduction of any subject (100 x 90) in 4 different colors
-- Semi-automatic calibration
-- Interactive starting position configuration
+- Reproduction of any subject (100 x 90) in 4 different colors (camera, stepper motor)
+- Semi-automatic calibration (TOF sensor, stepper motor)
+- Interactive starting position configuration (IR sensors, stepper motor)
 ## Requirements
 ### Python 3.x
 #### External libraries
