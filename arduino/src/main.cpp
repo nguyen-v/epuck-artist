@@ -64,7 +64,7 @@
 #define STEPPER_POSITION_2        (STEPPER_MAX_VALUE*2/4 - STEPPER_OFFSET/2)
 #define STEPPER_POSITION_3        (STEPPER_MAX_VALUE*3/4 - STEPPER_OFFSET)
 
-#define DEFAULT_POSITION    STEPPER_POSITION_0
+#define DEFAULT_POSITION          STEPPER_POSITION_0
 
 /*===========================================================================*/
 /* Module data structures and types.                                         */
@@ -78,7 +78,7 @@ enum Color {white, black, red, green, blue};
 static NeoSWSerial BTserial(BT_SERIAL_PIN_1, BT_SERIAL_PIN_2);
 static ServoTimer2 servo;
 static Stepper stepper = Stepper(STEPS_PER_REV, PIN_STEPPER_1, PIN_STEPPER_2, 
-                                                PIN_STEPPER_3, PIN_STEPPER_4);
+                                 PIN_STEPPER_3, PIN_STEPPER_4);
 static int16_t stepper_position = DEFAULT_POSITION;
 
 
@@ -87,54 +87,54 @@ static int16_t stepper_position = DEFAULT_POSITION;
 /*===========================================================================*/
 
 /**
- * @brief				    moves stepper motor and servo motor to change colors
- * @param[in]	col		a valid color (enum Color)
- * @return				  none
+ * @brief             moves stepper motor and servo motor to change colors
+ * @param[in]   col   a valid color (enum Color)
+ * @return            none
  */
 static void change_color(Color col)
 {
-  // lift servo
-  servo.write(DEFAULT_PULSE_WIDTH+DELTA_PULSE);
-  delay(SERVO_STEPPER_INTERVAL);
-  int16_t goal_step = 0;
-  switch(col) {
-    case white:
-      return; // if white is requested, just lift the pens
-      break;
-    case black:
-      goal_step = STEPPER_POSITION_0;
-      break;
-    case red:
-      goal_step = STEPPER_POSITION_1;
-      break;
-    case green:
-      goal_step = STEPPER_POSITION_2;
-      break;
-    case blue:
-      goal_step = STEPPER_POSITION_3;
-      break;
-  }
+	// lift servo
+	servo.write(DEFAULT_PULSE_WIDTH+DELTA_PULSE);
+	delay(SERVO_STEPPER_INTERVAL);
+	int16_t goal_step = 0;
+	switch (col) {
+		case white:
+			return; // if white is requested, just lift the pens
+			break;
+		case black:
+			goal_step = STEPPER_POSITION_0;
+			break;
+		case red:
+			goal_step = STEPPER_POSITION_1;
+			break;
+		case green:
+			goal_step = STEPPER_POSITION_2;
+			break;
+		case blue:
+			goal_step = STEPPER_POSITION_3;
+			break;
+	}
 
-  int16_t delta_step = goal_step - stepper_position;
-  stepper.step(delta_step);
-  delay(SERVO_STEPPER_INTERVAL);
-  stepper_position = goal_step;
-  // lower servo
-  servo.write(DEFAULT_PULSE_WIDTH);
+	int16_t delta_step = goal_step - stepper_position;
+	stepper.step(delta_step);
+	delay(SERVO_STEPPER_INTERVAL);
+	stepper_position = goal_step;
+	// lower servo
+	servo.write(DEFAULT_PULSE_WIDTH);
 }
 
 /**
- * @brief				    resets motors to their standby state.
- * @return				  none
+ * @brief             resets motors to their standby state.
+ * @return            none
  */
 static void reset_motors()
 {
-  servo.write(DEFAULT_PULSE_WIDTH+DELTA_PULSE);
-  delay(SERVO_STEPPER_INTERVAL);
-  int16_t goal_step = DEFAULT_POSITION;
-  int16_t delta_step = goal_step - stepper_position;
-  stepper.step(delta_step);
-  stepper_position = goal_step;
+	servo.write(DEFAULT_PULSE_WIDTH+DELTA_PULSE);
+	delay(SERVO_STEPPER_INTERVAL);
+	int16_t goal_step = DEFAULT_POSITION;
+	int16_t delta_step = goal_step - stepper_position;
+	stepper.step(delta_step);
+	stepper_position = goal_step;
 }
 
 /*===========================================================================*/
@@ -143,40 +143,40 @@ static void reset_motors()
 
 void setup() 
 {
-  servo.attach(PIN_SERVO);
-  stepper.setSpeed(STEPPER_SPEED);
+	servo.attach(PIN_SERVO);
+	stepper.setSpeed(STEPPER_SPEED);
 
-  Serial.begin(SERIAL_BAUD_RATE);
-  BTserial.begin(BT_BAUD_RATE);
+	Serial.begin(SERIAL_BAUD_RATE);
+	BTserial.begin(BT_BAUD_RATE);
 
-  delay(SERVO_STEPPER_INTERVAL);
-  servo.write(DEFAULT_PULSE_WIDTH+DELTA_PULSE);
+	delay(SERVO_STEPPER_INTERVAL);
+	servo.write(DEFAULT_PULSE_WIDTH+DELTA_PULSE);
 }
 
 void loop() 
 {
-  if (BTserial.available()) {
-    char cmd = BTserial.read();
-    switch(cmd) {
-      case 'W':
-        change_color(white);
-        break;
-      case 'D': // dark
-        change_color(black);
-        break;
-      case 'R':
-        change_color(red);
-        break;
-      case 'G':
-        change_color(green);
-        break;
-      case 'B':
-        change_color(blue);
-        break;
-      case 'X':
-        reset_motors();
-        break;
-    }
-    BTserial.println(CONFIMATION_MSG);
-  }
+	if (BTserial.available()) {
+		char cmd = BTserial.read();
+		switch (cmd) {
+			case 'W':
+				change_color(white);
+				break;
+			case 'D': // dark
+				change_color(black);
+				break;
+			case 'R':
+				change_color(red);
+				break;
+			case 'G':
+				change_color(green);
+				break;
+			case 'B':
+				change_color(blue);
+				break;
+			case 'X':
+				reset_motors();
+				break;
+		}
+	BTserial.println(CONFIMATION_MSG);
+	}
 }
