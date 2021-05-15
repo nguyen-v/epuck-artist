@@ -304,8 +304,9 @@ static float sobel_filter(void)
 /**
  * @brief                       Sets the color at the edge to the color inside
  *                              the shape that the edge is encircling.
- *                              This is possible for the sobel_angle_state points
- *                              to the interior of a shape.
+ * @note                        The sobel_angle_state buffer tells us in which
+ *                              octant the interior of a shape is, in relation
+ *                              to the corresponding pixel
  * @param[out]     color        Pointer to buffer containing path color
  * @return                      none
  */
