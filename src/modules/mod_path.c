@@ -504,7 +504,8 @@ static void set_contours_color(uint8_t* color, uint16_t size_edges)
  *                              we cut all pixels between the start and the end.
  */
 static void contour_optimization(edge_track *contour, uint16_t start, uint16_t end,
-                                  uint8_t* opt_contour){
+                                  uint8_t* opt_contour)
+{
 	uint16_t start_depth[(end-start)/2];
 	uint16_t end_depth[(end-start)/2];
 
@@ -573,8 +574,8 @@ static void contour_optimization(edge_track *contour, uint16_t start, uint16_t e
  * @return      opt_contours_size   length of buffer containing all contours
  */
 static uint16_t path_optimization(edge_track* contours, edge_pos* edges,
-                                   uint16_t size_edges){
-
+                                   uint16_t size_edges)
+{
 	uint16_t opt_contours_size = 0;
 	uint16_t contours_size = 0;
 	for (uint8_t i = 0; i < (size_edges)/2; ++i){
@@ -654,8 +655,8 @@ static void reorder_edges_index(uint16_t opt_contours_size, uint16_t size_edges)
  * @param[in]   size_edges         size (length) of edges buffer
  * @return                         none
  */
-static void nearest_neighbour(uint16_t size_edges){
-
+static void nearest_neighbour(uint16_t size_edges)
+{
 	uint16_t min_index = 0;
 	float min_distance = IM_HEIGHT_PX+IM_LENGTH_PX;
 	float distance = 0;
@@ -718,7 +719,6 @@ static void nearest_neighbour(uint16_t size_edges){
 static void create_final_path(uint8_t* color, uint16_t size_edges,
                                cartesian_coord* final_path)
 {
-
 	cartesian_coord init_pos;
 	init_pos.x = INIT_ROBPOS_PX; init_pos.y = INIT_ROBPOS_PY;
 	final_path[0] = init_pos;
@@ -760,8 +760,8 @@ static void create_final_path(uint8_t* color, uint16_t size_edges,
  * @return                      none
  */
 static void img_resize(cartesian_coord* path, uint16_t canvas_size_x,
-                        uint16_t canvas_size_y){
-
+                        uint16_t canvas_size_y)
+{
 	// calculate resize coefficient
 	float resize_coeff_x = (float)canvas_size_x/IM_LENGTH_PX;
 	float resize_coeff_y = (float)canvas_size_y/IM_HEIGHT_PX;

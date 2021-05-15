@@ -102,8 +102,8 @@ static uint16_t kalman1d(uint16_t U)
  * @brief   Thread for applying Kalman filter to TOF measurements.
  */
 static THD_WORKING_AREA(wa_tof_kalman, 256);
-static THD_FUNCTION(thd_tof_kalman, arg) {
-
+static THD_FUNCTION(thd_tof_kalman, arg)
+{
 	chRegSetThreadName(__FUNCTION__);
 	(void)arg;
 

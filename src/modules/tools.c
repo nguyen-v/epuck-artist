@@ -18,14 +18,15 @@
 /* Module exported functions.                                                */
 /*===========================================================================*/
 
-uint16_t position(uint8_t pos_x, uint8_t pos_y){
-
+uint16_t position(uint8_t pos_x, uint8_t pos_y)
+{
 	uint16_t position = pos_x + (uint16_t)pos_y*IM_LENGTH_PX;
 	return position;
 }
 
-float perpendicular_distance(struct cartesian_coord start, struct cartesian_coord end, struct cartesian_coord point){
-
+float perpendicular_distance(struct cartesian_coord start, struct cartesian_coord end,
+                             struct cartesian_coord point)
+{
 	int32_t line1 = start.x - end.x; // int32 to avoid underflow
 	int32_t line2 = start.y - end.y;
 
@@ -41,8 +42,8 @@ return distance;
 }
 
 
-float two_point_distance(struct cartesian_coord point1, struct cartesian_coord point2){
-
+float two_point_distance(struct cartesian_coord point1, struct cartesian_coord point2)
+{
 	float distance = 0;
 	int32_t  a = point1.x - point2.x ;
 	int32_t  b = point1.y - point2.y ;

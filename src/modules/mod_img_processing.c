@@ -554,8 +554,8 @@ static void remove_unique_px(void)
  *                                of img_buffer. Active pixels take the value of
  *                                IM_MAX_VALUE and inactive pixels take a value of 0.
  */
-static void canny_edge(void){
-
+static void canny_edge(void)
+{
 	// free position and color buffers
 	data_free();
 
@@ -616,8 +616,8 @@ static void canny_edge(void){
 /*===========================================================================*/
 
 static THD_WORKING_AREA(wa_capture_image, 256);
-static THD_FUNCTION(thd_capture_image, arg) {
-
+static THD_FUNCTION(thd_capture_image, arg)
+{
 	chRegSetThreadName(__FUNCTION__);
 	(void)arg;
 
@@ -643,8 +643,8 @@ static THD_FUNCTION(thd_capture_image, arg) {
 
 
 static THD_WORKING_AREA(wa_process_image, 1024);
-static THD_FUNCTION(thd_process_image, arg) {
-
+static THD_FUNCTION(thd_process_image, arg)
+{
 	chRegSetThreadName(__FUNCTION__);
 	(void)arg;
 

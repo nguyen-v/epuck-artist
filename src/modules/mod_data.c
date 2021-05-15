@@ -84,7 +84,6 @@ void data_free_color(void)
 	if (color != NULL)
 		free(color);
 	data_is_ready = false;
-//	data_length = 0;
 	color = NULL;
 }
 
