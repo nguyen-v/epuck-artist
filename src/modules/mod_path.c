@@ -410,7 +410,7 @@ static void set_contours_color(uint8_t* color, uint16_t size_edges)
 		uint16_t *blue_count = calloc(size_edges/2, sizeof(uint16_t*));
 		for (uint16_t i = 0; i < size_edges; i+=2) {
 			if (edges[i+1].index > edges[i].index) {
-				for (uint16_t j = edges[i].index; j <= edges[i+1].index; ++j){
+				for (uint16_t j = edges[i].index; j <= edges[i+1].index; ++j) {
 
 					switch (color[position(contours[j].pos.x, contours[j].pos.y)]) {
 						case black:
@@ -431,7 +431,7 @@ static void set_contours_color(uint8_t* color, uint16_t size_edges)
 				}
 			} else if (edges[i+1].index < edges[i].index) {
 				//int16 because j is decremented to -1 for an index of 0
-				for (int16_t j = edges[i].index; j >= edges[i+1].index; --j){
+				for (int16_t j = edges[i].index; j >= edges[i+1].index; --j) {
 
 					switch (color[position(contours[j].pos.x, contours[j].pos.y)]) {
 						case black:
@@ -457,23 +457,23 @@ static void set_contours_color(uint8_t* color, uint16_t size_edges)
 		k = 0;
 		for (uint16_t i = 0; i < size_edges; i+=2) {
 			uint8_t final_color = white;
-			if (red_count[m] > fmax(fmax(green_count[m],blue_count[m]),black_count[m])){
+			if (red_count[m] > fmax(fmax(green_count[m],blue_count[m]),black_count[m])) {
 				final_color = red;
 			} else if (green_count[m] > fmax(fmax(blue_count[m],red_count[m]),
-			                                 black_count[m])){
+			                                 black_count[m])) {
 				final_color = green;
 			} else if (blue_count[m] > fmax(fmax(black_count[m],red_count[m]),
-			                                green_count[m])){
+			                                green_count[m])) {
 				final_color = blue;
 			}	else final_color = black;
 
 			if (edges[i+1].index > edges[i].index) {
-				for (uint16_t j = edges[i].index; j <= edges[i+1].index; ++j){
+				for (uint16_t j = edges[i].index; j <= edges[i+1].index; ++j) {
 					contours[k].color = final_color;
 					++k;
 				}
 			} else if (edges[i+1].index < edges[i].index) {
-				for (int16_t j = edges[i].index; j >= edges[i+1].index; --j){
+				for (int16_t j = edges[i].index; j >= edges[i+1].index; --j) {
 					contours[k].color = final_color;
 					++k;
 				}
@@ -516,7 +516,7 @@ static void contour_optimization(edge_track *contour, uint16_t start, uint16_t e
 
 	float distance = 0;
 
-	while (stack_count > 0){
+	while (stack_count > 0) {
 
 		start = start_depth[stack_count-1];
 		end = end_depth[stack_count-1];
@@ -527,8 +527,8 @@ static void contour_optimization(edge_track *contour, uint16_t start, uint16_t e
 		uint16_t index = start;
 		float dmax = 0;
 
-		for (uint16_t i = index+1; i < end; ++i){
-			if (opt_contour[i]){
+		for (uint16_t i = index+1; i < end; ++i) {
+			if (opt_contour[i]) {
 				distance = perpendicular_distance(contour[start].pos, contour[end].pos,
 				                                  contour[i].pos);
 				if (distance > dmax) {
@@ -538,7 +538,7 @@ static void contour_optimization(edge_track *contour, uint16_t start, uint16_t e
 			}
 		}
 
-		if (dmax >= MAX_PERP_DIST){
+		if (dmax >= MAX_PERP_DIST) {
 			start_depth[stack_count] = start;
 			end_depth[stack_count] = index;
 			++stack_count;
@@ -547,19 +547,19 @@ static void contour_optimization(edge_track *contour, uint16_t start, uint16_t e
 			++stack_count;
 		} else if (dmax == 0) {
 			uint16_t k = 0;
-			for (uint16_t i = start + 1; i < end;++i){
+			for (uint16_t i = start + 1; i < end;++i) {
 				opt_contour[i] = REMOVE;
 			}
-			while (k*MAX_PIXEL_DIST + start + 1 < end ){
+			while (k*MAX_PIXEL_DIST + start + 1 < end ) {
 				opt_contour[start+k*MAX_PIXEL_DIST] = KEEP;
 				++k;
 				}
-			if (!((k-1)*MAX_PIXEL_DIST+start == end)){
+			if (!((k-1)*MAX_PIXEL_DIST+start == end)) {
 				opt_contour[end] = KEEP;
 				++k;
 				}
 		} else {
-			for (uint16_t i = start + 1; i < end;++i){
+			for (uint16_t i = start + 1; i < end;++i) {
 				opt_contour[i] = REMOVE;
 			}
 		}
@@ -578,12 +578,12 @@ static uint16_t path_optimization(edge_track* contours, edge_pos* edges,
 {
 	uint16_t opt_contours_size = 0;
 	uint16_t contours_size = 0;
-	for (uint8_t i = 0; i < (size_edges)/2; ++i){
+	for (uint8_t i = 0; i < (size_edges)/2; ++i) {
 		uint16_t start_index = edges[i*2].index;
 		uint16_t end_index = edges[i*2+1].index;
 		uint8_t loop = 0;
 
-		if (end_index - start_index == 1){
+		if (end_index - start_index == 1) {
 			contours[opt_contours_size] = contours[contours_size];
 			contours[opt_contours_size+1] = contours[contours_size+1];
 			opt_contours_size += 2;
@@ -591,7 +591,7 @@ static uint16_t path_optimization(edge_track* contours, edge_pos* edges,
 		} else {
 			uint16_t length = end_index - start_index + 1;
 			if (contours[start_index].pos.x == contours[end_index].pos.x
-			   && contours[start_index].pos.y == contours[end_index].pos.y){
+			   && contours[start_index].pos.y == contours[end_index].pos.y) {
 				--length;
 				++loop;
 			}
@@ -599,25 +599,25 @@ static uint16_t path_optimization(edge_track* contours, edge_pos* edges,
 			new_contour = malloc(length*sizeof(struct edge_track));
 			contours_to_remove = malloc(length*sizeof(uint8_t));
 
-			for (uint8_t m = 0; m < length; ++m){
+			for (uint8_t m = 0; m < length; ++m) {
 				contours_to_remove[m] = KEEP;
 			}
 
-			for (uint16_t n = 0; n < length; ++n){
+			for (uint16_t n = 0; n < length; ++n) {
 				new_contour[n] = contours[contours_size + n];
 			}
 
 			contours_size += length;
 			contour_optimization(new_contour, 0, length-1, contours_to_remove);
 
-			for (uint8_t j = 0; j < length; ++j){
-				if (contours_to_remove[j] == KEEP){
+			for (uint8_t j = 0; j < length; ++j) {
+				if (contours_to_remove[j] == KEEP) {
 				contours[opt_contours_size] = new_contour[j];
 				++opt_contours_size;
 				}
 			}
 
-			if (loop){
+			if (loop) {
 				contours[opt_contours_size] = contours[contours_size];
 				++opt_contours_size;
 				++contours_size;
@@ -640,8 +640,8 @@ static uint16_t path_optimization(edge_track* contours, edge_pos* edges,
 static void reorder_edges_index(uint16_t opt_contours_size, uint16_t size_edges)
 {
 	uint16_t k = 0;
-	for (uint16_t i = 0; i < opt_contours_size; ++i){
-		if (contours[i].is_extremity == true){
+	for (uint16_t i = 0; i < opt_contours_size; ++i) {
+		if (contours[i].is_extremity == true) {
 			edges[k].index = i;
 			++k;
 		}
@@ -726,7 +726,7 @@ static void create_final_path(uint8_t* color, uint16_t size_edges,
 	uint16_t k = 1;
 	for (uint16_t i = 0; i < size_edges; i+=2) {
 		if (edges[i+1].index > edges[i].index) {
-			for (uint16_t j = edges[i].index; j <= edges[i+1].index; ++j){
+			for (uint16_t j = edges[i].index; j <= edges[i+1].index; ++j) {
 				final_path[k].x = contours[j].pos.x;
 				final_path[k].y = contours[j].pos.y;
 				if (j == edges[i].index)
@@ -737,7 +737,7 @@ static void create_final_path(uint8_t* color, uint16_t size_edges,
 			}
 		} else if (edges[i+1].index < edges[i].index) {
 			// int16 because j is decremented to -1 for an index of 0
-			for (int16_t j = edges[i].index; j >= edges[i+1].index; --j){
+			for (int16_t j = edges[i].index; j >= edges[i+1].index; --j) {
 				final_path[k].x = contours[j].pos.x;
 				final_path[k].y = contours[j].pos.y;
 				if (j == edges[i].index)

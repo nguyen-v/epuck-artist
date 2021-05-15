@@ -33,6 +33,6 @@ uint16_t sensors_tof_kalman(void);
  * @return              position in mm for which the object is stable
  */
 uint16_t sensors_tof_wait(uint16_t distance_min, uint16_t distance_max,
-						uint8_t distance_threshold, uint16_t time_ms);
+						  uint8_t distance_threshold, uint16_t time_ms);
 
 #endif /* _MOD_SENSORS_H_ */

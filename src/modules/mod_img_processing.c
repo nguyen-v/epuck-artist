@@ -197,7 +197,7 @@ static void set_grayscale_filter_colors(uint8_t* color)
 {
 	rgb_color rgb;
 //	uint8_t red_px, green_px, blue_px = 0;
-	for (uint16_t i = 0; i < (IM_LENGTH_PX * IM_HEIGHT_PX)*2; i+=2){
+	for (uint16_t i = 0; i < (IM_LENGTH_PX * IM_HEIGHT_PX)*2; i+=2) {
 
 		// extract RGB values and convert to range 0-255
 		uint16_t rgb_565 = ((int16_t)img_buffer[i]  << 8) | img_buffer[i+1];
@@ -223,8 +223,8 @@ static void set_grayscale_filter_colors(uint8_t* color)
 static void gaussian_filter(void)
 {
 	uint16_t pos = 0;
-	for (uint8_t x = 0; x < IM_LENGTH_PX; ++x){
-		for (uint8_t y = 0; y < IM_HEIGHT_PX; ++y){
+	for (uint8_t x = 0; x < IM_LENGTH_PX; ++x) {
+		for (uint8_t y = 0; y < IM_HEIGHT_PX; ++y) {
 			pos = position(x,y);
 			if (x < XY_OFFSET_5x5 || x >= (IM_LENGTH_PX - XY_OFFSET_5x5)
 			    || y < XY_OFFSET_5x5 || y >= (IM_HEIGHT_PX - XY_OFFSET_5x5)) {
@@ -233,8 +233,8 @@ static void gaussian_filter(void)
 			}
 			uint16_t conv = 0;
 			uint16_t k = 0;
-			for (int8_t x_ker = -XY_OFFSET_5x5; x_ker <= XY_OFFSET_5x5; ++x_ker){
-				for (int8_t y_ker = -XY_OFFSET_5x5; y_ker <= XY_OFFSET_5x5; ++y_ker){
+			for (int8_t x_ker = -XY_OFFSET_5x5; x_ker <= XY_OFFSET_5x5; ++x_ker) {
+				for (int8_t y_ker = -XY_OFFSET_5x5; y_ker <= XY_OFFSET_5x5; ++y_ker) {
 					conv += img_buffer[pos + x_ker +(y_ker * IM_LENGTH_PX)]*Gaus5x5[k];
 //					__SMMLA(img_buffer[position + x_ker +(y_ker * IM_LENGTH_PX)],Gaus5x5[k],conv);
 					++k;
@@ -258,14 +258,14 @@ static float sobel_filter(void)
 	float max = 0;
 	float theta = 0;
 	uint16_t pos = 0;
-	for (uint8_t x = XY_OFFSET_3x3; x < IM_LENGTH_PX-XY_OFFSET_3x3; ++x){
-		for (uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y){
+	for (uint8_t x = XY_OFFSET_3x3; x < IM_LENGTH_PX-XY_OFFSET_3x3; ++x) {
+		for (uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y) {
 			pos = position(x,y);
 			int16_t Ix = 10;
 			int16_t Iy = 0;
 			uint16_t k = 0;
-			for (int8_t x_ker = -XY_OFFSET_3x3; x_ker <= XY_OFFSET_3x3; ++x_ker){
-				for (int8_t y_ker = -XY_OFFSET_3x3; y_ker <= XY_OFFSET_3x3; ++y_ker){
+			for (int8_t x_ker = -XY_OFFSET_3x3; x_ker <= XY_OFFSET_3x3; ++x_ker) {
+				for (int8_t y_ker = -XY_OFFSET_3x3; y_ker <= XY_OFFSET_3x3; ++y_ker) {
 					Ix += img_temp_buffer[pos + x_ker +(y_ker * IM_LENGTH_PX)]*Kx[k];
 					Iy += img_temp_buffer[pos+ x_ker +(y_ker * IM_LENGTH_PX)]*Ky[k];
 //					Ix = (int16_t)__SMMLA((int32_t)(img_temp_buffer[pos + x_ker +(y_ker * IM_LENGTH_PX)]), (int32_t)(Kx[k]), (int32_t)Ix);
@@ -279,21 +279,21 @@ static float sobel_filter(void)
 
 			theta = atan2f((float)Ix , (float)Iy)*RAD2DEG;
 
-			if ((theta > FIRST_OCTANT_L && theta <= FIRST_OCTANT_H)){
+			if ((theta > FIRST_OCTANT_L && theta <= FIRST_OCTANT_H)) {
 				sobel_angle_state[pos] = first_octant;
-			} else if ((theta > SECOND_OCTANT_L && theta <= SECOND_OCTANT_H)){
+			} else if ((theta > SECOND_OCTANT_L && theta <= SECOND_OCTANT_H)) {
 				sobel_angle_state[pos] = second_octant;
-			} else if ((theta > THIRD_OCTANT_L && theta <= THIRD_OCTANT_H)){
+			} else if ((theta > THIRD_OCTANT_L && theta <= THIRD_OCTANT_H)) {
 				sobel_angle_state[pos] = third_octant;
-			} else if ((theta > FOURTH_OCTANT_L && theta <= FOURTH_OCTANT_H	)){
+			} else if ((theta > FOURTH_OCTANT_L && theta <= FOURTH_OCTANT_H	)) {
 				sobel_angle_state[pos] = fourth_octant;
-			} else if ((theta > FIFTH_OCTANT_L) || (theta <= FIFTH_OCTANT_H)){
+			} else if ((theta > FIFTH_OCTANT_L) || (theta <= FIFTH_OCTANT_H)) {
 				sobel_angle_state[pos] =  fifth_octant;
-			} else if ((theta > SIXTH_OCTANT_L && theta <= SIXTH_OCTANT_H)){
+			} else if ((theta > SIXTH_OCTANT_L && theta <= SIXTH_OCTANT_H)) {
 				sobel_angle_state[pos] = sixth_octant;
-			} else if ((theta > SEVENTH_OCTANT_L && theta <= SEVENTH_OCTANT_H)){
+			} else if ((theta > SEVENTH_OCTANT_L && theta <= SEVENTH_OCTANT_H)) {
 				sobel_angle_state[pos] = seventh_octant;
-			} else if ((theta > EIGHTH_OCTANT_L && theta <= EIGHTH_OCTANT_H)){
+			} else if ((theta > EIGHTH_OCTANT_L && theta <= EIGHTH_OCTANT_H)) {
 				sobel_angle_state[pos] = eighth_octant;
 			}
 		}
@@ -371,10 +371,10 @@ static void local_max_supression(float max)
 	const int8_t dy = IM_LENGTH_PX;
 
 	uint16_t pos = 0;
-	for (uint8_t x = XY_OFFSET_3x3; x < IM_LENGTH_PX-XY_OFFSET_3x3; ++x){
-		for (uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y){
+	for (uint8_t x = XY_OFFSET_3x3; x < IM_LENGTH_PX-XY_OFFSET_3x3; ++x) {
+		for (uint8_t y = XY_OFFSET_3x3; y < IM_HEIGHT_PX-XY_OFFSET_3x3; ++y) {
 			pos = position(x,y);
-			switch (sobel_angle_state[pos]){
+			switch (sobel_angle_state[pos]) {
 				case first_octant:
 				case fifth_octant:
 					mag_octant = I_mag[pos - dx];
@@ -444,7 +444,7 @@ static void edge_track_hyst(void)
 	for (uint8_t x = 1; x < IM_LENGTH_PX-1; x++) {
 		for (uint8_t y = 1; y < IM_HEIGHT_PX-1; y++) {
 			pos = position(x,y);
-			if (img_temp_buffer[pos] == WEAK_PIXEL){
+			if (img_temp_buffer[pos] == WEAK_PIXEL) {
 				if (img_temp_buffer[pos-dy-dx] == STRONG_PIXEL
 				    || img_temp_buffer[pos-dy] == STRONG_PIXEL
 				    || img_temp_buffer[pos-dy+dx] == STRONG_PIXEL
@@ -632,7 +632,7 @@ static THD_FUNCTION(thd_capture_image, arg)
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
 	chThdSleepMilliseconds(1000);
-	while (1){
+	while (1) {
 		chBSemWait(&sem_capture_image);
 		dcmi_capture_start();
 		wait_image_ready();
@@ -648,7 +648,7 @@ static THD_FUNCTION(thd_process_image, arg)
 	chRegSetThreadName(__FUNCTION__);
 	(void)arg;
 
-	while (1){
+	while (1) {
 		chBSemWait(&sem_image_captured);
 		img_buffer = dcmi_get_last_image_ptr();
 

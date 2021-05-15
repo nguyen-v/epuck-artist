@@ -12,12 +12,12 @@
 /* Module data structures and types.                                         */
 /*===========================================================================*/
 
-typedef struct edge_pos{
+typedef struct edge_pos {
 	struct cartesian_coord pos;
 	uint16_t index;
 } edge_pos;
 
-typedef struct edge_track{
+typedef struct edge_track {
 	struct cartesian_coord pos;
 	uint8_t label;
 	bool is_extremity;	//line = 0, edge = 1;

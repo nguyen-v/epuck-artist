@@ -29,7 +29,8 @@ uint16_t position(uint8_t pos_x, uint8_t pos_y);
  * @param[in]   point   intermediate point
  * @return              perpendicular distance in px
  */
-float perpendicular_distance(struct cartesian_coord start, struct cartesian_coord end, struct cartesian_coord point);
+float perpendicular_distance(struct cartesian_coord start, struct cartesian_coord end,
+                             struct cartesian_coord point);
 
 /**
  * @brief               calculates the distance between 2 points
