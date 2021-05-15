@@ -695,7 +695,7 @@ void mod_img_processing_init(void)
 	process_img_create_thd();
 }
 
-void capture_image(void){
+void capture_image(void)
+{
 	chBSemSignal(&sem_capture_image);
-
 }
